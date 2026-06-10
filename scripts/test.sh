@@ -27,12 +27,12 @@ expect_fail() {
 }
 
 echo "== Syntax and config checks =="
-check "bash -n install.sh" bash -n "$repo_dir/install.sh"
-check "bash -n scripts/notify-macos.sh" bash -n "$repo_dir/scripts/notify-macos.sh"
-check "bash -n scripts/ccstatusline-usage-api.sh" bash -n "$repo_dir/scripts/ccstatusline-usage-api.sh"
+check "bash -n claude/install.sh" bash -n "$repo_dir/claude/install.sh"
+check "bash -n claude/scripts/notify-macos.sh" bash -n "$repo_dir/claude/scripts/notify-macos.sh"
+check "bash -n claude/scripts/ccstatusline-usage-api.sh" bash -n "$repo_dir/claude/scripts/ccstatusline-usage-api.sh"
 check "bash -n scripts/test.sh" bash -n "$repo_dir/scripts/test.sh"
-check "json: claude-settings.example.json" /usr/bin/python3 -m json.tool "$repo_dir/config/claude-settings.example.json"
-check "json: ccstatusline-settings.json" /usr/bin/python3 -m json.tool "$repo_dir/config/ccstatusline-settings.json"
+check "json: claude-settings.example.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/claude-settings.example.json"
+check "json: ccstatusline-settings.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/ccstatusline-settings.json"
 
 echo "== Installer behavior (temporary HOME) =="
 tmp_home="$(mktemp -d)"
@@ -58,7 +58,7 @@ cat > "$test_claude_dir/settings.json" <<'JSON'
 }
 JSON
 
-check "install.sh runs" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh"
+check "install.sh runs" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/install.sh"
 check "notify hook installed" test -x "$test_claude_dir/hooks/notify-macos.sh"
 check "statusline wrapper installed" test -x "$test_claude_dir/ccstatusline-usage-api.sh"
 check "ccstatusline settings installed" test -f "$tmp_home/.config/ccstatusline/settings.json"
@@ -96,7 +96,7 @@ else
   failures=$((failures + 1))
 fi
 
-check "install.sh reruns" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh"
+check "install.sh reruns" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/install.sh"
 
 if env CLAUDE_DIR="$test_claude_dir" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
 import json
@@ -123,12 +123,12 @@ else
 fi
 
 echo "== ccnotify offline checks =="
-check "bash -n bin/ccnotify" bash -n "$repo_dir/bin/ccnotify"
-check "ccnotify help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify" help
-check "ccnotify with no args shows help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify"
-check "ccnotify version" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify" version
+check "bash -n claude/bin/ccnotify" bash -n "$repo_dir/claude/bin/ccnotify"
+check "ccnotify help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccnotify" help
+check "ccnotify with no args shows help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccnotify"
+check "ccnotify version" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccnotify" version
 
-version_output="$(env CLAUDE_CONFIG_DIR="$tmp_home/empty-claude" bash "$repo_dir/bin/ccnotify" version 2>/dev/null)"
+version_output="$(env CLAUDE_CONFIG_DIR="$tmp_home/empty-claude" bash "$repo_dir/claude/bin/ccnotify" version 2>/dev/null)"
 if grep -q "installed version: unknown" <<<"$version_output"
 then
   echo "ok: missing state reports unknown version"
@@ -138,15 +138,15 @@ else
 fi
 
 expect_fail "check fails fast with placeholder repo" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/bin/ccnotify" check
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccnotify" check
 expect_fail "upgrade fails fast with placeholder repo" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/bin/ccnotify" upgrade
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccnotify" upgrade
 expect_fail "install requires a version" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/bin/ccnotify" install
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccnotify" install
 expect_fail "rollback requires a version" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/bin/ccnotify" rollback
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccnotify" rollback
 expect_fail "unknown command fails" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify" frobnicate
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccnotify" frobnicate
 
 echo "== Installed ccnotify and state file =="
 check "ccnotify installed to ~/.local/bin" test -x "$tmp_home/.local/bin/ccnotify"
@@ -183,7 +183,7 @@ fi
 check "release-style install runs" \
   env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" \
   CCNOTIFY_VERSION="v9.9.9" CCNOTIFY_REPO="example/repo" \
-  bash "$repo_dir/install.sh"
+  bash "$repo_dir/claude/install.sh"
 
 if env STATE="$test_claude_dir/ccnotify-state.json" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
 import json

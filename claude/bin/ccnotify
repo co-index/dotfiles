@@ -139,8 +139,8 @@ install_version() {
 
   local src_dir
   src_dir="$(find "$tmp_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-  if [[ -z "$src_dir" || ! -f "$src_dir/install.sh" ]]; then
-    die "version $version does not contain install.sh; cannot install it"
+  if [[ -z "$src_dir" || ! -f "$src_dir/claude/install.sh" ]]; then
+    die "version $version does not contain claude/install.sh; cannot install it"
   fi
 
   local previous
@@ -150,7 +150,7 @@ install_version() {
   if ! CCNOTIFY_VERSION="$version" \
        CCNOTIFY_PREVIOUS_VERSION="$previous" \
        CCNOTIFY_REPO="$GITHUB_REPO" \
-       bash "$src_dir/install.sh"; then
+       bash "$src_dir/claude/install.sh"; then
     die "the $version installer failed; your previous files remain in their .bak.* backups"
   fi
 

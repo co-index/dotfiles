@@ -8,6 +8,10 @@
 
 同步 Starship 终端提示符的配置文件 `starship.toml`。
 
+效果（starship 默认样式 + 单行提示符 + 无 Nerd Font 图标）：
+
+![Starship 提示符](../docs/images/starship-prompt.png)
+
 ### 前置条件
 
 - macOS
@@ -70,6 +74,11 @@ bash starship/uninstall.sh     # 直接运行模块脚本
 ### What it does
 
 Syncs the Starship prompt configuration file `starship.toml`.
+
+What it looks like (starship defaults + single-line prompt + no Nerd Font
+icons):
+
+![Starship prompt](../docs/images/starship-prompt.png)
 
 ### Prerequisites
 

@@ -16,6 +16,20 @@ before overwriting them.
 | [vscode](vscode/README.md) | VS Code settings、keybindings、插件清单 | `~/Library/Application Support/Code/User` | VS Code；装插件需 `code` CLI |
 | [starship](starship/README.md) | Starship 终端提示符配置 | `~/.config/starship.toml` | starship |
 
+### 效果预览
+
+Claude Code 状态栏（claude 模块）：
+
+![Claude Code 状态栏](docs/images/claude-statusline.png)
+
+macOS 通知（claude 模块）：
+
+![macOS 通知](docs/images/claude-notification.png)
+
+Starship 提示符（starship 模块）：
+
+![Starship 提示符](docs/images/starship-prompt.png)
+
 ### 前置条件
 
 所有模块共同要求：
@@ -89,6 +103,20 @@ bash scripts/test.sh
 | [claude](claude/README.md) | Claude Code macOS notifications, status line, `ccnotify` version manager | `~/.claude`, `~/.config/ccstatusline`, `~/.local/bin` | Claude Code; Node.js + npm |
 | [vscode](vscode/README.md) | VS Code settings, keybindings, extension list | `~/Library/Application Support/Code/User` | VS Code; `code` CLI for extensions |
 | [starship](starship/README.md) | Starship prompt configuration | `~/.config/starship.toml` | starship |
+
+### Preview
+
+The Claude Code status line (claude module):
+
+![Claude Code status line](docs/images/claude-statusline.png)
+
+macOS notifications (claude module):
+
+![macOS notification](docs/images/claude-notification.png)
+
+The Starship prompt (starship module):
+
+![Starship prompt](docs/images/starship-prompt.png)
 
 ### Prerequisites
 

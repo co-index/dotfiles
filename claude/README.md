@@ -16,6 +16,14 @@ manager for Claude Code.
 - 安装脚本会在覆盖已有文件前自动备份。
 - 提供 `ccnotify` 命令，按 GitHub Release 版本检查、升级和回滚本套配置。
 
+状态栏效果（模型/上下文/项目、计划/分支/worktree、5h 与 7d 用量条）：
+
+![Claude Code 状态栏](../docs/images/claude-statusline.png)
+
+通知效果：
+
+![macOS 通知](../docs/images/claude-notification.png)
+
 ### 安装内容
 
 安装脚本会写入以下文件：
@@ -239,6 +247,15 @@ rm -f ~/.claude/ccnotify-state.json
 - Backs up existing files before the installer overwrites them.
 - Ships a `ccnotify` command to check, upgrade, and roll back this setup by
   GitHub release version.
+
+The status line (model/context/project, plan/branch/worktree, and the 5h
+and 7d usage bars):
+
+![Claude Code status line](../docs/images/claude-statusline.png)
+
+Notifications:
+
+![macOS notification](../docs/images/claude-notification.png)
 
 ### Installed Files
 

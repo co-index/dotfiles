@@ -40,6 +40,8 @@ bash starship/install.sh
 bash starship/export.sh
 ```
 
+提交前请检查文件中是否有私有主机名等不宜公开的内容。
+
 ### 恢复或卸载
 
 恢复：把 `.bak.*` 备份复制回 `~/.config/starship.toml`。
@@ -97,6 +99,9 @@ terminal window to see the change.
 ```bash
 bash starship/export.sh
 ```
+
+Check the file for private hostnames or anything else you would not publish
+before committing.
 
 ### Restore or Uninstall
 

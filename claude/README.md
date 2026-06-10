@@ -67,11 +67,13 @@ CLAUDE_CONFIG_DIR="$HOME/.claude" ./install.sh claude
 ### 手动安装
 
 ```bash
-mkdir -p ~/.claude/hooks ~/.config/ccstatusline
+mkdir -p ~/.claude/hooks ~/.config/ccstatusline ~/.local/bin
 cp claude/scripts/notify-macos.sh ~/.claude/hooks/notify-macos.sh
 cp claude/scripts/ccstatusline-usage-api.sh ~/.claude/ccstatusline-usage-api.sh
 cp claude/config/ccstatusline-settings.json ~/.config/ccstatusline/settings.json
-chmod +x ~/.claude/hooks/notify-macos.sh ~/.claude/ccstatusline-usage-api.sh
+cp claude/bin/ccnotify ~/.local/bin/ccnotify
+chmod +x ~/.claude/hooks/notify-macos.sh ~/.claude/ccstatusline-usage-api.sh \
+  ~/.local/bin/ccnotify
 ```
 
 然后把 `claude/config/claude-settings.example.json` 中的内容合并到：
@@ -276,11 +278,13 @@ CLAUDE_CONFIG_DIR="$HOME/.claude" ./install.sh claude
 ### Manual Install
 
 ```bash
-mkdir -p ~/.claude/hooks ~/.config/ccstatusline
+mkdir -p ~/.claude/hooks ~/.config/ccstatusline ~/.local/bin
 cp claude/scripts/notify-macos.sh ~/.claude/hooks/notify-macos.sh
 cp claude/scripts/ccstatusline-usage-api.sh ~/.claude/ccstatusline-usage-api.sh
 cp claude/config/ccstatusline-settings.json ~/.config/ccstatusline/settings.json
-chmod +x ~/.claude/hooks/notify-macos.sh ~/.claude/ccstatusline-usage-api.sh
+cp claude/bin/ccnotify ~/.local/bin/ccnotify
+chmod +x ~/.claude/hooks/notify-macos.sh ~/.claude/ccstatusline-usage-api.sh \
+  ~/.local/bin/ccnotify
 ```
 
 Then merge `claude/config/claude-settings.example.json` into:

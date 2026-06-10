@@ -148,6 +148,62 @@ expect_fail "rollback requires a version" \
 expect_fail "unknown command fails" \
   env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify" frobnicate
 
+echo "== Installed ccnotify and state file =="
+check "ccnotify installed to ~/.local/bin" test -x "$tmp_home/.local/bin/ccnotify"
+check "state file is valid JSON" /usr/bin/python3 -m json.tool "$test_claude_dir/ccnotify-state.json"
+
+if env STATE="$test_claude_dir/ccnotify-state.json" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+import json
+import os
+
+with open(os.environ["STATE"], "r", encoding="utf-8") as fh:
+    state = json.load(fh)
+
+assert state.get("version") == "dev", f"local install should record version dev, got {state.get('version')}"
+assert state.get("source") == "local", f"local install should record source local, got {state.get('source')}"
+assert state.get("repo"), "repo missing from state"
+assert state.get("installedAt"), "installedAt missing from state"
+PY
+then
+  echo "ok: local install writes dev state"
+else
+  echo "FAIL: local install writes dev state"
+  failures=$((failures + 1))
+fi
+
+if env CLAUDE_CONFIG_DIR="$test_claude_dir" "$tmp_home/.local/bin/ccnotify" version 2>/dev/null \
+  | grep -q "installed version: dev"
+then
+  echo "ok: installed ccnotify reads recorded version"
+else
+  echo "FAIL: installed ccnotify reads recorded version"
+  failures=$((failures + 1))
+fi
+
+check "release-style install runs" \
+  env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" \
+  CCNOTIFY_VERSION="v9.9.9" CCNOTIFY_REPO="example/repo" \
+  bash "$repo_dir/install.sh"
+
+if env STATE="$test_claude_dir/ccnotify-state.json" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+import json
+import os
+
+with open(os.environ["STATE"], "r", encoding="utf-8") as fh:
+    state = json.load(fh)
+
+assert state.get("version") == "v9.9.9", f"expected v9.9.9, got {state.get('version')}"
+assert state.get("source") == "release", f"expected source release, got {state.get('source')}"
+assert state.get("repo") == "example/repo", f"expected repo example/repo, got {state.get('repo')}"
+assert state.get("previousVersion") == "dev", f"expected previousVersion dev, got {state.get('previousVersion')}"
+PY
+then
+  echo "ok: release install records version, repo, and previous version"
+else
+  echo "FAIL: release install records version, repo, and previous version"
+  failures=$((failures + 1))
+fi
+
 echo
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures check(s) failed."

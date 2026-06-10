@@ -36,6 +36,8 @@ cp "$repo_dir/config/ccstatusline-settings.json" "$statusline_dir/settings.json"
 cp "$repo_dir/bin/ccnotify" "$bin_dir/ccnotify"
 chmod +x "$hooks_dir/notify-macos.sh" "$claude_dir/ccstatusline-usage-api.sh" "$bin_dir/ccnotify"
 
+bash "$repo_dir/scripts/build-notifier.sh"
+
 /usr/bin/python3 - "$settings_path" "$claude_dir" <<'PY'
 import json
 import os

@@ -11,6 +11,9 @@ manager for Claude Code.
 ### 功能
 
 - 当 Claude Code 停止运行或需要你关注时，发送 macOS 通知。
+- 通知由安装时编译的 ClaudeNotifier.app 发出：带 Claude 图标，点击可跳回
+  运行 Claude Code 的应用（VS Code / Warp / Terminal / iTerm2 等，按
+  `TERM_PROGRAM` 识别），无任何第三方依赖。
 - 使用 `ccstatusline` 显示紧凑的多行状态栏。
 - 在状态栏中补充项目名、worktree 名称和 Claude Max 计划标签。
 - 安装脚本会在覆盖已有文件前自动备份。
@@ -31,6 +34,7 @@ manager for Claude Code.
 ```text
 ~/.claude/hooks/notify-macos.sh
 ~/.claude/ccstatusline-usage-api.sh
+~/.claude/ClaudeNotifier.app    （安装时由 swiftc 编译）
 ~/.config/ccstatusline/settings.json
 ~/.local/bin/ccnotify
 ~/.claude/ccnotify-state.json
@@ -57,6 +61,8 @@ settings.json.bak.20260610-153000
 - Node.js 和 npm，因为状态栏包装脚本会运行 `npx -y ccstatusline@2.2.19`
   （版本已固定，避免每次渲染状态栏都联网解析 `@latest`；升级时改
   `claude/scripts/ccstatusline-usage-api.sh` 中的版本号）
+- swiftc（随 Xcode Command Line Tools 提供）——安装时编译 ClaudeNotifier
+  通知器；缺少时通知回退为 osascript 原生样式（不可点击）
 
 ### 自动安装
 
@@ -158,6 +164,11 @@ export PATH="$HOME/.local/bin:$PATH"
 - 修改 `claude/config/ccstatusline-settings.json` 可调整状态栏行、颜色和用量展示。
 - 修改 `claude/scripts/notify-macos.sh` 可调整通知标题、正文、声音和内容截断长度。
 - 修改 `claude/scripts/ccstatusline-usage-api.sh` 可调整项目名、worktree 和计划标签的展示逻辑。
+- 通知点击跳转的应用按 `TERM_PROGRAM` 自动识别，未覆盖的终端可设
+  `CCNOTIFY_ACTIVATE_BUNDLE_ID` 指定 bundle id。
+- 通知器源码在 `claude/notifier/main.swift`，图标在
+  `claude/assets/ccnotify.icns`，改完重跑 `./install.sh claude`（或
+  `bash claude/scripts/build-notifier.sh`）重新编译。
 
 修改后重新运行 `./install.sh claude`，或手动复制对应文件到安装位置。
 
@@ -205,6 +216,7 @@ bash claude/uninstall.sh     # 直接运行模块脚本
 ```bash
 rm -f ~/.claude/hooks/notify-macos.sh
 rm -f ~/.claude/ccstatusline-usage-api.sh
+rm -rf ~/.claude/ClaudeNotifier.app
 rm -f ~/.config/ccstatusline/settings.json
 rm -f ~/.local/bin/ccnotify
 rm -f ~/.claude/ccnotify-state.json
@@ -227,9 +239,14 @@ rm -f ~/.claude/ccnotify-state.json
 
 本仓库只保留可复用脚本和脱敏配置示例。
 
+本项目与 Anthropic 无关联；"Claude" 是 Anthropic, PBC 的商标，本仓库仅
+用其指代 Claude Code 产品本身。ClaudeNotifier 通知器为独立实现，设计
+思路致谢 [terminal-notifier](https://github.com/julienXX/terminal-notifier)。
+
 ### 排障
 
-- 没有通知：检查 macOS 的通知权限，以及 Claude Code 是否允许发送通知。
+- 没有通知：通知器第一次发通知时会请求权限，去 系统设置 → 通知 里允许
+  "ccnotify"；同时确认 Claude Code 本身允许发送通知。
 - 状态栏没有显示：确认 `~/.claude/settings.json` 的 `statusLine.command` 指向可执行脚本。
 - 提示找不到 `npx`：安装 Node.js/npm，或确认它们在 Claude Code 启动环境的 `PATH` 中。
 - 配置 JSON 报错：恢复安装脚本生成的 `.bak.*` 备份，修复 JSON 后再重新安装。
@@ -242,6 +259,10 @@ rm -f ~/.claude/ccnotify-state.json
 ### Features
 
 - Sends macOS notifications when Claude Code stops or needs attention.
+- Notifications come from ClaudeNotifier.app, compiled at install time: they
+  carry the Claude icon and clicking one jumps back to the app running
+  Claude Code (VS Code / Warp / Terminal / iTerm2 and friends, detected via
+  `TERM_PROGRAM`) — no third-party dependencies.
 - Shows a compact multi-line status line through `ccstatusline`.
 - Adds project, worktree, and Claude Max plan labels to the status line.
 - Backs up existing files before the installer overwrites them.
@@ -264,6 +285,7 @@ The installer writes these files:
 ```text
 ~/.claude/hooks/notify-macos.sh
 ~/.claude/ccstatusline-usage-api.sh
+~/.claude/ClaudeNotifier.app    (compiled by swiftc at install time)
 ~/.config/ccstatusline/settings.json
 ~/.local/bin/ccnotify
 ~/.claude/ccnotify-state.json
@@ -291,6 +313,9 @@ settings.json.bak.20260610-153000
   `npx -y ccstatusline@2.2.19` (the version is pinned so the status line never
   resolves `@latest` over the network on every render; bump the version in
   `claude/scripts/ccstatusline-usage-api.sh` to upgrade)
+- swiftc (ships with the Xcode Command Line Tools) — compiles the
+  ClaudeNotifier notifier at install time; without it notifications fall
+  back to the native osascript style (not clickable)
 
 ### Automatic Install
 
@@ -397,6 +422,11 @@ export PATH="$HOME/.local/bin:$PATH"
   sounds, and truncation length.
 - Edit `claude/scripts/ccstatusline-usage-api.sh` to change how project, worktree, and
   plan labels are displayed.
+- The app a clicked notification activates is detected via `TERM_PROGRAM`;
+  set `CCNOTIFY_ACTIVATE_BUNDLE_ID` for terminals the mapping does not cover.
+- The notifier source lives in `claude/notifier/main.swift` and the icon in
+  `claude/assets/ccnotify.icns`; rerun `./install.sh claude` (or
+  `bash claude/scripts/build-notifier.sh`) after changing either.
 
 After changing a file, run `./install.sh claude` again or copy the changed file into
 the install location manually.
@@ -448,6 +478,7 @@ Manual uninstall is also possible:
 ```bash
 rm -f ~/.claude/hooks/notify-macos.sh
 rm -f ~/.claude/ccstatusline-usage-api.sh
+rm -rf ~/.claude/ClaudeNotifier.app
 rm -f ~/.config/ccstatusline/settings.json
 rm -f ~/.local/bin/ccnotify
 rm -f ~/.claude/ccnotify-state.json
@@ -470,10 +501,16 @@ Do not publish your real Claude Code state files. In particular, never commit:
 
 This repository keeps only reusable scripts and sanitized examples.
 
+This project is not affiliated with Anthropic; "Claude" is a trademark of
+Anthropic, PBC and is used here only to refer to the Claude Code product.
+The notifier is an independent implementation whose design tips its hat to
+[terminal-notifier](https://github.com/julienXX/terminal-notifier).
+
 ### Troubleshooting
 
-- No notification appears: check macOS notification permissions and make sure
-  Claude Code is allowed to send notifications.
+- No notification appears: the notifier asks for permission the first time
+  it posts — allow "ccnotify" under System Settings -> Notifications, and
+  make sure Claude Code itself is allowed to send notifications.
 - The status line does not appear: confirm that `statusLine.command` in
   `~/.claude/settings.json` points to an executable script.
 - `npx` is not found: install Node.js/npm or make sure they are on the `PATH`

@@ -3,6 +3,9 @@ set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 failures=0
+# Skip the ClaudeNotifier swift build during installer runs; the dedicated
+# build test below exercises it once.
+export CCNOTIFY_SKIP_BUILD=1
 
 check() {
   local name="$1"
@@ -46,6 +49,9 @@ echo "== Syntax and config checks =="
 check "bash -n claude/install.sh" bash -n "$repo_dir/claude/install.sh"
 check "bash -n claude/scripts/notify-macos.sh" bash -n "$repo_dir/claude/scripts/notify-macos.sh"
 check "bash -n claude/scripts/ccstatusline-usage-api.sh" bash -n "$repo_dir/claude/scripts/ccstatusline-usage-api.sh"
+check "bash -n claude/scripts/build-notifier.sh" bash -n "$repo_dir/claude/scripts/build-notifier.sh"
+check "claude icon asset exists" test -s "$repo_dir/claude/assets/ccnotify.icns"
+check "notifier swift source exists" test -s "$repo_dir/claude/notifier/main.swift"
 check "bash -n scripts/test.sh" bash -n "$repo_dir/scripts/test.sh"
 check "json: claude-settings.example.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/claude-settings.example.json"
 check "json: ccstatusline-settings.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/ccstatusline-settings.json"
@@ -249,10 +255,27 @@ else
   failures=$((failures + 1))
 fi
 
+echo "== ClaudeNotifier build =="
+if command -v swiftc >/dev/null 2>&1; then
+  notifier_home="$tmp_home/notifier-home"
+  mkdir -p "$notifier_home/.claude"
+  check "build-notifier.sh builds the app" \
+    env CLAUDE_CONFIG_DIR="$notifier_home/.claude" CCNOTIFY_SKIP_BUILD=0 \
+    bash "$repo_dir/claude/scripts/build-notifier.sh"
+  check "ClaudeNotifier binary exists" \
+    test -x "$notifier_home/.claude/ClaudeNotifier.app/Contents/MacOS/ClaudeNotifier"
+  check "ClaudeNotifier signature verifies" \
+    codesign --verify "$notifier_home/.claude/ClaudeNotifier.app"
+else
+  echo "ok: swiftc not available; skipped the ClaudeNotifier build test"
+fi
+
 echo "== claude uninstall =="
+mkdir -p "$test_claude_dir/ClaudeNotifier.app/Contents"
 check "claude uninstall runs" \
   env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/uninstall.sh" claude
 check "uninstall removed notify hook" test ! -e "$test_claude_dir/hooks/notify-macos.sh"
+check "uninstall removed ClaudeNotifier" test ! -e "$test_claude_dir/ClaudeNotifier.app"
 check "uninstall removed statusline wrapper" test ! -e "$test_claude_dir/ccstatusline-usage-api.sh"
 check "uninstall removed ccstatusline settings" test ! -e "$tmp_home/.config/ccstatusline/settings.json"
 check "uninstall removed ccnotify" test ! -e "$tmp_home/.local/bin/ccnotify"

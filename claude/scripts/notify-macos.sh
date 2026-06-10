@@ -6,6 +6,7 @@ input="$(cat || true)"
 /usr/bin/python3 - "$input" <<'PY'
 import json
 import os
+import shutil
 import subprocess
 import sys
 from collections import deque
@@ -140,13 +141,68 @@ if short_session:
     subtitle_parts.append(f"session {short_session}")
 subtitle = " | ".join(subtitle_parts)[:120]
 
-title = f"[Claude] {project}"
+# No leading "[": terminal-notifier drops -title values that start with it.
+title = f"Claude · {project}"
 
-script = """
+
+def activate_bundle_id():
+    # The app to focus when the notification is clicked. Hooks inherit the
+    # environment of the app Claude Code runs in, so TERM_PROGRAM identifies
+    # it; CCNOTIFY_ACTIVATE_BUNDLE_ID overrides the mapping.
+    override = os.environ.get("CCNOTIFY_ACTIVATE_BUNDLE_ID")
+    if override:
+        return override
+    return {
+        "vscode": "com.microsoft.VSCode",
+        "WarpTerminal": "dev.warp.Warp-Stable",
+        "Apple_Terminal": "com.apple.Terminal",
+        "iTerm.app": "com.googlecode.iterm2",
+        "ghostty": "com.mitchellh.ghostty",
+        "Hyper": "co.zeit.hyper",
+    }.get(os.environ.get("TERM_PROGRAM", ""), "")
+
+
+# Prefer the project's own ClaudeNotifier.app (built by build-notifier.sh,
+# Claude icon, modern notification API), then terminal-notifier, then the
+# non-clickable osascript fallback.
+claude_dir = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
+claude_notifier = os.path.join(
+    claude_dir, "ClaudeNotifier.app", "Contents", "MacOS", "ClaudeNotifier"
+)
+notifier = ""
+if os.access(claude_notifier, os.X_OK):
+    notifier = claude_notifier
+else:
+    notifier = shutil.which("terminal-notifier") or next(
+        (
+            path
+            for path in (
+                "/opt/homebrew/bin/terminal-notifier",
+                "/usr/local/bin/terminal-notifier",
+            )
+            if os.path.exists(path)
+        ),
+        "",
+    )
+
+if notifier:
+    # Clickable notification; -activate focuses the app that was running
+    # Claude Code when the hook fired.
+    cmd = [notifier, "-title", title, "-message", body, "-sound", sound]
+    if subtitle:
+        cmd += ["-subtitle", subtitle]
+    bundle_id = activate_bundle_id()
+    if bundle_id:
+        cmd += ["-activate", bundle_id]
+    subprocess.run(
+        cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
+else:
+    # Fallback: native AppleScript notification (not clickable).
+    script = """
 on run argv
   display notification (item 1 of argv) with title (item 2 of argv) subtitle (item 3 of argv) sound name (item 4 of argv)
 end run
 """
-
-subprocess.run(["/usr/bin/osascript", "-e", script, body, title, subtitle, sound], check=False)
+    subprocess.run(["/usr/bin/osascript", "-e", script, body, title, subtitle, sound], check=False)
 PY

@@ -15,6 +15,12 @@ remove_file() {
   fi
 }
 
+# Built artifact, rebuilt by install.sh; no backup needed.
+if [[ -d "$claude_dir/ClaudeNotifier.app" ]]; then
+  rm -rf "$claude_dir/ClaudeNotifier.app"
+  echo "Removed $claude_dir/ClaudeNotifier.app."
+fi
+
 remove_file "$claude_dir/hooks/notify-macos.sh"
 remove_file "$claude_dir/ccstatusline-usage-api.sh"
 remove_file "$statusline_dir/settings.json"

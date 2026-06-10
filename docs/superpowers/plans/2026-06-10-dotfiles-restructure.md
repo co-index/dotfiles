@@ -276,7 +276,7 @@ mkdir -p "$starship_home"
 check "starship install runs" env HOME="$starship_home" bash "$repo_dir/starship/install.sh"
 check "starship.toml installed" test -f "$starship_home/.config/starship.toml"
 check "starship install reruns" env HOME="$starship_home" bash "$repo_dir/starship/install.sh"
-starship_backups="$(ls "$starship_home/.config"/starship.toml.bak.* 2>/dev/null | wc -l | tr -d ' ')"
+starship_backups="$(find "$starship_home/.config" -maxdepth 1 -name 'starship.toml.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$starship_backups" -ge 1 ]]; then
   echo "ok: starship rerun creates backup"
 else
@@ -436,7 +436,7 @@ fi
 check "vscode settings installed" test -f "$vscode_user_dir/settings.json"
 check "vscode keybindings installed" test -f "$vscode_user_dir/keybindings.json"
 check "vscode install reruns" env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh"
-vscode_backups="$(ls "$vscode_user_dir"/settings.json.bak.* 2>/dev/null | wc -l | tr -d ' ')"
+vscode_backups="$(find "$vscode_user_dir" -maxdepth 1 -name 'settings.json.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$vscode_backups" -ge 1 ]]; then
   echo "ok: vscode rerun creates backup"
 else

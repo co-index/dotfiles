@@ -227,7 +227,7 @@ mkdir -p "$starship_home"
 check "starship install runs" env HOME="$starship_home" bash "$repo_dir/starship/install.sh"
 check "starship.toml installed" test -f "$starship_home/.config/starship.toml"
 check "starship install reruns" env HOME="$starship_home" bash "$repo_dir/starship/install.sh"
-starship_backups="$(ls "$starship_home/.config"/starship.toml.bak.* 2>/dev/null | wc -l | tr -d ' ')"
+starship_backups="$(find "$starship_home/.config" -maxdepth 1 -name 'starship.toml.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$starship_backups" -ge 1 ]]; then
   echo "ok: starship rerun creates backup"
 else

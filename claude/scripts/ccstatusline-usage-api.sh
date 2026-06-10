@@ -141,14 +141,18 @@ except Exception:
     raise SystemExit(0)
 
 print(json.dumps(data, ensure_ascii=False), end="")
-' | npx -y ccstatusline@latest | /usr/bin/python3 -c '
+' | npx -y ccstatusline@2.2.19 | CC_PLAN_LABEL="$plan_label" \
+  CC_PROJECT_LABEL="$project_label" \
+  CC_WORKTREE_LABEL="$worktree_label" \
+  /usr/bin/python3 -c '
+import os
 import re
 import sys
 
 text = sys.stdin.read()
-text = text.replace("__CLAUDE_PLAN__", """'"$plan_label"'""" or "Claude")
-project = """'"$project_label"'""".strip()
-worktree = """'"$worktree_label"'""".strip()
+text = text.replace("__CLAUDE_PLAN__", os.environ.get("CC_PLAN_LABEL") or "Claude")
+project = (os.environ.get("CC_PROJECT_LABEL") or "").strip()
+worktree = (os.environ.get("CC_WORKTREE_LABEL") or "").strip()
 green = "\033[38;5;70m"
 empty_green = "\033[38;5;22m"
 block = "█"

@@ -9,20 +9,26 @@ statusline_dir="$HOME/.config/ccstatusline"
 bin_dir="$HOME/.local/bin"
 state_path="$claude_dir/ccnotify-state.json"
 
+# Skips the backup when the existing file already matches the replacement,
+# so reruns do not pile up identical .bak.* files. settings.json is merged in
+# place rather than copied, so it is always backed up.
 backup_file() {
   local path="$1"
-  if [[ -e "$path" ]]; then
-    cp "$path" "$path.bak.$(date +%Y%m%d-%H%M%S)"
+  local replacement="${2:-}"
+  [[ -e "$path" ]] || return 0
+  if [[ -n "$replacement" ]] && diff -q "$path" "$replacement" >/dev/null 2>&1; then
+    return 0
   fi
+  cp "$path" "$path.bak.$(date +%Y%m%d-%H%M%S)"
 }
 
 mkdir -p "$hooks_dir" "$statusline_dir" "$bin_dir"
 
-backup_file "$hooks_dir/notify-macos.sh"
-backup_file "$claude_dir/ccstatusline-usage-api.sh"
-backup_file "$statusline_dir/settings.json"
+backup_file "$hooks_dir/notify-macos.sh" "$repo_dir/scripts/notify-macos.sh"
+backup_file "$claude_dir/ccstatusline-usage-api.sh" "$repo_dir/scripts/ccstatusline-usage-api.sh"
+backup_file "$statusline_dir/settings.json" "$repo_dir/config/ccstatusline-settings.json"
 backup_file "$settings_path"
-backup_file "$bin_dir/ccnotify"
+backup_file "$bin_dir/ccnotify" "$repo_dir/bin/ccnotify"
 
 cp "$repo_dir/scripts/notify-macos.sh" "$hooks_dir/notify-macos.sh"
 cp "$repo_dir/scripts/ccstatusline-usage-api.sh" "$claude_dir/ccstatusline-usage-api.sh"

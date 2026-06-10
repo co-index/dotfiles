@@ -7,13 +7,16 @@ target="$target_dir/starship.toml"
 
 backup_file() {
   local path="$1"
-  if [[ -e "$path" ]]; then
-    cp "$path" "$path.bak.$(date +%Y%m%d-%H%M%S)"
+  local replacement="${2:-}"
+  [[ -e "$path" ]] || return 0
+  if [[ -n "$replacement" ]] && diff -q "$path" "$replacement" >/dev/null 2>&1; then
+    return 0
   fi
+  cp "$path" "$path.bak.$(date +%Y%m%d-%H%M%S)"
 }
 
 mkdir -p "$target_dir"
-backup_file "$target"
+backup_file "$target" "$module_dir/starship.toml"
 cp "$module_dir/starship.toml" "$target"
 
 if ! command -v starship >/dev/null 2>&1; then

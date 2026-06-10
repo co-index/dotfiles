@@ -126,6 +126,13 @@ else
 fi
 
 check "install.sh reruns" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh" claude
+claude_hook_backups="$(find "$test_claude_dir/hooks" -maxdepth 1 -name 'notify-macos.sh.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
+if [[ "$claude_hook_backups" -eq 0 ]]; then
+  echo "ok: unchanged claude rerun skips hook backup"
+else
+  echo "FAIL: unchanged claude rerun skips hook backup"
+  failures=$((failures + 1))
+fi
 
 if env CLAUDE_DIR="$test_claude_dir" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
 import json
@@ -244,10 +251,19 @@ check "starship install runs" env HOME="$starship_home" bash "$repo_dir/starship
 check "starship.toml installed" test -f "$starship_home/.config/starship.toml"
 check "starship install reruns" env HOME="$starship_home" bash "$repo_dir/starship/install.sh"
 starship_backups="$(find "$starship_home/.config" -maxdepth 1 -name 'starship.toml.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
-if [[ "$starship_backups" -ge 1 ]]; then
-  echo "ok: starship rerun creates backup"
+if [[ "$starship_backups" -eq 0 ]]; then
+  echo "ok: unchanged starship rerun skips backup"
 else
-  echo "FAIL: starship rerun creates backup"
+  echo "FAIL: unchanged starship rerun skips backup"
+  failures=$((failures + 1))
+fi
+printf '\n# local tweak\n' >> "$starship_home/.config/starship.toml"
+check "starship install over modified file" env HOME="$starship_home" bash "$repo_dir/starship/install.sh"
+starship_backups="$(find "$starship_home/.config" -maxdepth 1 -name 'starship.toml.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
+if [[ "$starship_backups" -ge 1 ]]; then
+  echo "ok: modified starship file is backed up"
+else
+  echo "FAIL: modified starship file is backed up"
   failures=$((failures + 1))
 fi
 
@@ -290,10 +306,19 @@ check "vscode settings installed" test -f "$vscode_user_dir/settings.json"
 check "vscode keybindings installed" test -f "$vscode_user_dir/keybindings.json"
 check "vscode install reruns" env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh"
 vscode_backups="$(find "$vscode_user_dir" -maxdepth 1 -name 'settings.json.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
-if [[ "$vscode_backups" -ge 1 ]]; then
-  echo "ok: vscode rerun creates backup"
+if [[ "$vscode_backups" -eq 0 ]]; then
+  echo "ok: unchanged vscode rerun skips backup"
 else
-  echo "FAIL: vscode rerun creates backup"
+  echo "FAIL: unchanged vscode rerun skips backup"
+  failures=$((failures + 1))
+fi
+printf '\n// local tweak\n' >> "$vscode_user_dir/settings.json"
+check "vscode install over modified file" env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh"
+vscode_backups="$(find "$vscode_user_dir" -maxdepth 1 -name 'settings.json.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
+if [[ "$vscode_backups" -ge 1 ]]; then
+  echo "ok: modified vscode file is backed up"
+else
+  echo "FAIL: modified vscode file is backed up"
   failures=$((failures + 1))
 fi
 

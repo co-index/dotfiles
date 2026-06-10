@@ -20,7 +20,15 @@ for file in settings.json keybindings.json; do
 done
 
 if command -v code >/dev/null 2>&1; then
-  code --list-extensions > "$module_dir/extensions.txt"
+  new_extensions="$(code --list-extensions)"
+  if [[ -f "$module_dir/extensions.txt" ]] \
+    && diff -q "$module_dir/extensions.txt" <(printf '%s\n' "$new_extensions") >/dev/null 2>&1; then
+    echo "extensions.txt: unchanged"
+  else
+    echo "extensions.txt: importing changes (lines removed here disappear from the manifest):"
+    diff -u "$module_dir/extensions.txt" <(printf '%s\n' "$new_extensions") 2>/dev/null || true
+  fi
+  printf '%s\n' "$new_extensions" > "$module_dir/extensions.txt"
   echo "Exported extensions.txt ($(wc -l < "$module_dir/extensions.txt" | tr -d ' ') extensions)"
 else
   echo "Note: 'code' CLI not found; extensions.txt left unchanged."

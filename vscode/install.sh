@@ -6,15 +6,18 @@ user_dir="$HOME/Library/Application Support/Code/User"
 
 backup_file() {
   local path="$1"
-  if [[ -e "$path" ]]; then
-    cp "$path" "$path.bak.$(date +%Y%m%d-%H%M%S)"
+  local replacement="${2:-}"
+  [[ -e "$path" ]] || return 0
+  if [[ -n "$replacement" ]] && diff -q "$path" "$replacement" >/dev/null 2>&1; then
+    return 0
   fi
+  cp "$path" "$path.bak.$(date +%Y%m%d-%H%M%S)"
 }
 
 mkdir -p "$user_dir"
 
 for file in settings.json keybindings.json; do
-  backup_file "$user_dir/$file"
+  backup_file "$user_dir/$file" "$module_dir/$file"
   cp "$module_dir/$file" "$user_dir/$file"
 done
 

@@ -48,6 +48,11 @@ bash vscode/export.sh
 重新生成 `extensions.txt`。提交前请检查 settings.json 中是否有密钥、代理
 等私密内容。
 
+注意：`extensions.txt` 会被本机已安装的插件列表完全覆盖。settings.json
+依赖的插件（如 `esbenp.prettier-vscode`、`usernamehw.errorlens`）若本机
+没有安装，导出会把它们从清单中移除——脚本会打印 diff，提交前请确认没有
+误删。
+
 ### 恢复或卸载
 
 恢复：把对应的 `.bak.*` 备份复制回原文件名即可。
@@ -113,6 +118,12 @@ bash vscode/export.sh
 Copies your live settings and keybindings back into the repo and regenerates
 `extensions.txt` via `code --list-extensions`. Review settings.json for
 secrets (tokens, proxies, private hosts) before committing.
+
+Note: `extensions.txt` is fully overwritten by the list of locally installed
+extensions. Extensions that settings.json depends on (such as
+`esbenp.prettier-vscode` or `usernamehw.errorlens`) are dropped from the
+manifest if they are not installed locally — the script prints a diff, so
+check it for accidental removals before committing.
 
 ### Restore or Uninstall
 

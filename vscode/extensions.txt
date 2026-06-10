@@ -1,6 +1,11 @@
+anthropic.claude-code
+dbaeumer.vscode-eslint
 dracula-theme.theme-dracula
 eamodio.gitlens
+esbenp.prettier-vscode
 github.vscode-github-actions
 ms-ceintl.vscode-language-pack-zh-hans
 pkief.material-icon-theme
 techer.open-in-browser
+typescript.native-preview
+usernamehw.errorlens

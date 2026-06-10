@@ -9,6 +9,12 @@ for file in settings.json keybindings.json; do
     echo "export.sh: $user_dir/$file not found" >&2
     exit 1
   fi
+  if [[ -f "$module_dir/$file" ]] && diff -q "$module_dir/$file" "$user_dir/$file" >/dev/null 2>&1; then
+    echo "$file: unchanged"
+  else
+    echo "$file: importing changes:"
+    diff -u "$module_dir/$file" "$user_dir/$file" 2>/dev/null || true
+  fi
   cp "$user_dir/$file" "$module_dir/$file"
   echo "Exported $file"
 done

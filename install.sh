@@ -60,9 +60,11 @@ fi
 
 for module in "${selected[@]}"; do
   echo "==> Installing module: $module"
-  if ! bash "$repo_dir/$module/install.sh"; then
+  rc=0
+  bash "$repo_dir/$module/install.sh" || rc=$?
+  if [[ "$rc" -ne 0 ]]; then
     echo "install.sh: module '$module' failed" >&2
-    exit 1
+    exit "$rc"
   fi
 done
 

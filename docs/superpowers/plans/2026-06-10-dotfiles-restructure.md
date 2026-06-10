@@ -1118,13 +1118,13 @@ Expected: suite green; usage printed; bogus rejected; ccnotify usage intact; one
 This must be the very last action. Run from OUTSIDE the repo using absolute paths; afterwards every command must use the new path.
 
 ```bash
-mv /Users/index/project/claude-code-macos-notify-statusline /Users/index/project/dotfiles
-git -C /Users/index/project/dotfiles status --short
-git -C /Users/index/project/dotfiles log --oneline -1
-bash /Users/index/project/dotfiles/scripts/test.sh
+mv ~/project/claude-code-macos-notify-statusline ~/project/dotfiles
+git -C ~/project/dotfiles status --short
+git -C ~/project/dotfiles log --oneline -1
+bash ~/project/dotfiles/scripts/test.sh
 ```
 
-Expected: git works from the new path; suite green. Note: the rename invalidates the current shell's cwd and any open editors — the controller/user should be told to reopen from `/Users/index/project/dotfiles`.
+Expected: git works from the new path; suite green. Note: the rename invalidates the current shell's cwd and any open editors — the controller/user should be told to reopen from `~/project/dotfiles`.
 
 ---
 

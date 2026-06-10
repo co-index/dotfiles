@@ -21,4 +21,3 @@ daemon*
 *.bak.*
 
 # Optional local screenshots before you choose what to publish.
-!docs/.gitkeep

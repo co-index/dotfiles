@@ -290,8 +290,28 @@ else
   failures=$((failures + 1))
 fi
 
-check "claude uninstall reruns" \
-  env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/uninstall.sh" claude
+settings_backups_before="$(find "$test_claude_dir" -maxdepth 1 -name 'settings.json.bak.*' | wc -l | tr -d ' ')"
+rerun_output="$(env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/uninstall.sh" claude 2>&1)" \
+  && rerun_ok=1 || rerun_ok=0
+if [[ "$rerun_ok" -eq 1 ]]; then
+  echo "ok: claude uninstall reruns"
+else
+  echo "FAIL: claude uninstall reruns"
+  failures=$((failures + 1))
+fi
+if grep -q "left unchanged" <<<"$rerun_output" && ! grep -q "Removed the project statusLine" <<<"$rerun_output"; then
+  echo "ok: rerun reports settings left unchanged"
+else
+  echo "FAIL: rerun reports settings left unchanged"
+  failures=$((failures + 1))
+fi
+settings_backups_after="$(find "$test_claude_dir" -maxdepth 1 -name 'settings.json.bak.*' | wc -l | tr -d ' ')"
+if [[ "$settings_backups_after" -eq "$settings_backups_before" ]]; then
+  echo "ok: rerun adds no settings backup"
+else
+  echo "FAIL: rerun adds no settings backup"
+  failures=$((failures + 1))
+fi
 
 echo "== starship module =="
 check "bash -n starship/install.sh" bash -n "$repo_dir/starship/install.sh"
@@ -376,6 +396,26 @@ if [[ "$vscode_backups" -ge 1 ]]; then
   echo "ok: modified vscode file is backed up"
 else
   echo "FAIL: modified vscode file is backed up"
+  failures=$((failures + 1))
+fi
+
+fake_code_dir="$tmp_home/fake-code-bin"
+mkdir -p "$fake_code_dir"
+cat > "$fake_code_dir/code" <<'SH'
+#!/bin/bash
+if [[ "$1" == "--install-extension" ]]; then
+  echo "Error while installing extension $2: simulated marketplace failure" >&2
+  exit 1
+fi
+exit 0
+SH
+chmod +x "$fake_code_dir/code"
+vscode_fail_output="$(env HOME="$vscode_home" PATH="$fake_code_dir:/usr/bin:/bin" bash "$repo_dir/vscode/install.sh" 2>&1)" \
+  && vscode_fail_ok=1 || vscode_fail_ok=0
+if [[ "$vscode_fail_ok" -eq 1 ]] && grep -q "simulated marketplace failure" <<<"$vscode_fail_output"; then
+  echo "ok: failed extension install surfaces the code CLI error"
+else
+  echo "FAIL: failed extension install surfaces the code CLI error"
   failures=$((failures + 1))
 fi
 

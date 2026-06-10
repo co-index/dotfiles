@@ -26,10 +26,11 @@ if command -v code >/dev/null 2>&1; then
   installed=0
   while IFS= read -r extension || [[ -n "$extension" ]]; do
     [[ -z "$extension" || "$extension" == \#* ]] && continue
-    if code --install-extension "$extension" >/dev/null 2>&1; then
+    if output="$(code --install-extension "$extension" 2>&1)"; then
       installed=$((installed + 1))
     else
       echo "Warning: failed to install extension: $extension"
+      printf '%s\n' "$output" | grep -v '^[[:space:]]*$' | tail -n 2 | sed 's/^/    /' || true
       failed=$((failed + 1))
     fi
   done < "$module_dir/extensions.txt"

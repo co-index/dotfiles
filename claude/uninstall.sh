@@ -22,9 +22,13 @@ remove_file "$bin_dir/ccnotify"
 remove_file "$claude_dir/ccnotify-state.json"
 
 if [[ -f "$settings_path" ]]; then
-  cp "$settings_path" "$settings_path.bak.$(date +%Y%m%d-%H%M%S)"
+  # Backs up and rewrites settings.json only when project entries are
+  # actually present, so rerunning the uninstaller stays quiet and does
+  # not pile up identical backups.
   /usr/bin/python3 - "$settings_path" <<'PY'
+import datetime
 import json
+import shutil
 import sys
 
 settings_path = sys.argv[1]
@@ -33,6 +37,8 @@ with open(settings_path, "r", encoding="utf-8") as fh:
         settings = json.load(fh)
     except json.JSONDecodeError as exc:
         raise SystemExit(f"Invalid JSON in {settings_path}: {exc}")
+
+original = json.dumps(settings, sort_keys=True)
 
 status = settings.get("statusLine")
 if (
@@ -71,11 +77,19 @@ if isinstance(hooks, dict):
     if not hooks:
         settings.pop("hooks", None)
 
-with open(settings_path, "w", encoding="utf-8") as fh:
-    json.dump(settings, fh, ensure_ascii=False, indent=2)
-    fh.write("\n")
+if json.dumps(settings, sort_keys=True) == original:
+    print(f"No project settings found in {settings_path}; left unchanged.")
+else:
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    shutil.copy2(settings_path, f"{settings_path}.bak.{stamp}")
+    with open(settings_path, "w", encoding="utf-8") as fh:
+        json.dump(settings, fh, ensure_ascii=False, indent=2)
+        fh.write("\n")
+    print(
+        f"Removed the project statusLine and notification hooks from {settings_path} "
+        "(backup kept next to it)."
+    )
 PY
-  echo "Removed the project statusLine and notification hooks from $settings_path."
 fi
 
 echo "Uninstalled Claude Code notifications and status line."

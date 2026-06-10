@@ -35,6 +35,7 @@ import sys
 path = sys.argv[1]
 with open(path, "r", encoding="utf-8") as fh:
     text = fh.read()
+text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
 text = re.sub(r"^\s*//.*$", "", text, flags=re.M)
 text = re.sub(r",\s*([}\]])", r"\1", text)
 json.loads(text)

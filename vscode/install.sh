@@ -21,7 +21,7 @@ done
 if command -v code >/dev/null 2>&1; then
   failed=0
   installed=0
-  while IFS= read -r extension; do
+  while IFS= read -r extension || [[ -n "$extension" ]]; do
     [[ -z "$extension" || "$extension" == \#* ]] && continue
     if code --install-extension "$extension" >/dev/null 2>&1; then
       installed=$((installed + 1))

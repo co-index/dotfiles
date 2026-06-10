@@ -306,6 +306,7 @@ cp "$repo_dir/vscode/export.sh" "$vscode_module_copy/export.sh"
 check "vscode export runs (no code CLI)" \
   env HOME="$vscode_export_home" PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
 check "vscode export copied settings" grep -q '"export": "test"' "$vscode_module_copy/settings.json"
+check "vscode export copied keybindings" test -f "$vscode_module_copy/keybindings.json"
 expect_fail "vscode export fails without source" \
   env HOME="$tmp_home/vscode-missing-home" PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
 

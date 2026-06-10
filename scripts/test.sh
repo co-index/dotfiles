@@ -128,8 +128,8 @@ check "ccnotify help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/b
 check "ccnotify with no args shows help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify"
 check "ccnotify version" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify" version
 
-if env CLAUDE_CONFIG_DIR="$tmp_home/empty-claude" bash "$repo_dir/bin/ccnotify" version 2>/dev/null \
-  | grep -q "installed version: unknown"
+version_output="$(env CLAUDE_CONFIG_DIR="$tmp_home/empty-claude" bash "$repo_dir/bin/ccnotify" version 2>/dev/null)"
+if grep -q "installed version: unknown" <<<"$version_output"
 then
   echo "ok: missing state reports unknown version"
 else

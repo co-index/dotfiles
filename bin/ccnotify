@@ -10,6 +10,7 @@ PLACEHOLDER_REPO="OWNER/REPO"
 
 claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 state_file="$claude_dir/ccnotify-state.json"
+tmp_dir=""
 
 usage() {
   cat <<EOF
@@ -62,14 +63,13 @@ key = sys.argv[2]
 try:
     with open(path, "r", encoding="utf-8") as fh:
         state = json.load(fh)
-except Exception:
-    print("unknown", end="")
-else:
     value = state.get(key)
     if isinstance(value, str) and value:
         print(value, end="")
     else:
         print("unknown", end="")
+except Exception:
+    print("unknown", end="")
 PY
 }
 
@@ -124,9 +124,8 @@ install_version() {
   require_repo
   require_curl
 
-  local tmp_dir
   tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "$tmp_dir"' EXIT
+  trap 'if [[ -n "$tmp_dir" ]]; then rm -rf "$tmp_dir"; fi' EXIT
 
   local archive="$tmp_dir/ccnotify-src.tar.gz"
   echo "Downloading $GITHUB_REPO at $version ..."

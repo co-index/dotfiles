@@ -1,0 +1,145 @@
+{
+  "version": 3,
+  "lines": [
+    [
+      {
+        "id": "model",
+        "type": "model",
+        "color": "cyan",
+        "rawValue": true
+      },
+      {
+        "id": "effort-sep",
+        "type": "separator"
+      },
+      {
+        "id": "effort",
+        "type": "thinking-effort",
+        "color": "brightBlack",
+        "rawValue": true
+      },
+      {
+        "id": "context-sep",
+        "type": "separator"
+      },
+      {
+        "id": "context-length",
+        "type": "context-length",
+        "color": "brightBlack"
+      }
+    ],
+    [
+      {
+        "id": "plan-label",
+        "type": "custom-text",
+        "customText": "Plan: __CLAUDE_PLAN__",
+        "color": "cyan"
+      },
+      {
+        "id": "branch-sep",
+        "type": "separator"
+      },
+      {
+        "id": "git-branch",
+        "type": "git-branch",
+        "color": "magenta"
+      },
+      {
+        "id": "changes-sep",
+        "type": "separator"
+      },
+      {
+        "id": "git-changes",
+        "type": "git-changes",
+        "color": "yellow"
+      }
+    ],
+    [
+      {
+        "id": "session-window",
+        "type": "custom-text",
+        "customText": "5h",
+        "color": "brightBlack"
+      },
+      {
+        "id": "session-sep",
+        "type": "separator"
+      },
+      {
+        "id": "session-usage",
+        "type": "session-usage",
+        "color": "green",
+        "rawValue": true,
+        "metadata": {
+          "display": "slider"
+        }
+      },
+      {
+        "id": "reset-sep",
+        "type": "separator"
+      },
+      {
+        "id": "reset-timer",
+        "type": "reset-timer",
+        "color": "yellow",
+        "rawValue": true,
+        "metadata": {
+          "compact": "true"
+        }
+      }
+    ],
+    [
+      {
+        "id": "weekly-window",
+        "type": "custom-text",
+        "customText": "7d",
+        "color": "brightBlack"
+      },
+      {
+        "id": "weekly-sep",
+        "type": "separator"
+      },
+      {
+        "id": "weekly-usage",
+        "type": "weekly-usage",
+        "color": "green",
+        "rawValue": true,
+        "metadata": {
+          "display": "slider"
+        }
+      },
+      {
+        "id": "weekly-reset-sep",
+        "type": "separator"
+      },
+      {
+        "id": "weekly-reset-timer",
+        "type": "weekly-reset-timer",
+        "color": "yellow",
+        "rawValue": true,
+        "metadata": {
+          "compact": "true"
+        }
+      }
+    ]
+  ],
+  "flexMode": "full-until-compact",
+  "compactThreshold": 60,
+  "colorLevel": 2,
+  "inheritSeparatorColors": false,
+  "globalBold": false,
+  "minimalistMode": false,
+  "powerline": {
+    "enabled": false,
+    "separators": [
+      ">"
+    ],
+    "separatorInvertBackground": [
+      false
+    ],
+    "startCaps": [],
+    "endCaps": [],
+    "autoAlign": false,
+    "continueThemeAcrossLines": false
+  }
+}

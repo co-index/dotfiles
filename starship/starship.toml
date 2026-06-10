@@ -1,53 +1,10 @@
+# Starship defaults, except: no blank line between prompts, the prompt
+# character stays on the same line, and no Nerd Font branch icon (the
+# terminal font here cannot render it).
 add_newline = false
-command_timeout = 5000
 
-format = "$directory$git_branch$git_status$nodejs$character"
-
-[character]
-success_symbol = "[›](bold #9AA5B1)"
-error_symbol = "[›](bold #E06C75)"
-vimcmd_symbol = "[<](bold blue)"
-
-[directory]
-truncation_length = 2
-truncate_to_repo = false
-style = "bold cyan"
-read_only = " [ro]"
+[line_break]
+disabled = true
 
 [git_branch]
 symbol = ""
-style = "bold #2ECC71"
-format = "[$branch]($style)"
-
-[git_status]
-style = "#7B8794"
-format = "[ $all_status$ahead_behind]($style)"
-
-conflicted = "×"
-ahead = "↑${count}"
-behind = "↓${count}"
-diverged = "↕"
-untracked = "?"
-stashed = "≡"
-modified = "!"
-staged = "+"
-renamed = "»"
-deleted = "✘"
-
-[nodejs]
-symbol = ""
-style = "#6FCF97"
-format = " [$version]($style) "
-detect_files = ["package.json"]
-
-[package]
-disabled = true
-
-[aws]
-disabled = true
-
-[gcloud]
-disabled = true
-
-[docker_context]
-disabled = true

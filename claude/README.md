@@ -180,7 +180,19 @@ printf '{"cwd":"%s"}' "$PWD" | claude/scripts/ccstatusline-usage-api.sh
 
 如果安装后想恢复旧配置，请把 `.bak.YYYYMMDD-HHMMSS` 备份文件复制回原文件名。
 
-卸载时可删除本项目安装的文件：
+卸载：
+
+```bash
+./uninstall.sh claude        # 从仓库根目录
+# 或
+bash claude/uninstall.sh     # 直接运行模块脚本
+```
+
+脚本会删除上面"安装内容"列出的全部文件（删除前先备份），并从
+`~/.claude/settings.json` 中移除本项目添加的 `statusLine`、`Notification`
+和 `Stop` 配置——你自己添加的设置和 hooks 会原样保留。
+
+也可以手动卸载：
 
 ```bash
 rm -f ~/.claude/hooks/notify-macos.sh
@@ -190,8 +202,8 @@ rm -f ~/.local/bin/ccnotify
 rm -f ~/.claude/ccnotify-state.json
 ```
 
-然后从 `~/.claude/settings.json` 中移除本项目添加的 `statusLine`、`Notification`
-和 `Stop` 配置，或恢复安装前生成的备份。
+然后从 `~/.claude/settings.json` 中移除本项目添加的配置，或恢复安装前
+生成的备份。
 
 ### 安全说明
 
@@ -401,7 +413,20 @@ The first status line run may be slower while `npx` downloads `ccstatusline`.
 To restore an older configuration, copy the matching `.bak.YYYYMMDD-HHMMSS`
 file back to its original name.
 
-To uninstall, remove the files installed by this project:
+To uninstall:
+
+```bash
+./uninstall.sh claude        # from the repo root
+# or
+bash claude/uninstall.sh     # run the module script directly
+```
+
+The script removes every file listed under Installed Files (backing each one
+up first) and strips the `statusLine`, `Notification`, and `Stop` settings
+this project added from `~/.claude/settings.json` — your own settings and
+hooks are left untouched.
+
+Manual uninstall is also possible:
 
 ```bash
 rm -f ~/.claude/hooks/notify-macos.sh
@@ -411,8 +436,8 @@ rm -f ~/.local/bin/ccnotify
 rm -f ~/.claude/ccnotify-state.json
 ```
 
-Then remove the added `statusLine`, `Notification`, and `Stop` settings from
-`~/.claude/settings.json`, or restore the backup created before installation.
+Then remove the added settings from `~/.claude/settings.json`, or restore the
+backup created before installation.
 
 ### Safety Notes
 

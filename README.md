@@ -50,6 +50,17 @@ git pull
 claude 模块还提供 `ccnotify` 命令，按 GitHub Release 检查、升级和回滚版本，
 详见 [claude/README.md](claude/README.md)。
 
+### 卸载
+
+```bash
+./uninstall.sh <module>    # 卸载单个模块
+./uninstall.sh --all       # 卸载全部模块
+```
+
+每个文件删除前都会生成 `.bak.YYYYMMDD-HHMMSS` 备份；claude 模块还会从
+`~/.claude/settings.json` 中移除本项目写入的配置并保留你自己的设置。
+各模块的卸载细节见对应 README。
+
 ### 把本机改动收回仓库
 
 vscode 和 starship 模块提供导出脚本：
@@ -114,6 +125,18 @@ git pull
 
 The claude module also ships `ccnotify`, which checks, upgrades, and rolls
 back by GitHub release — see [claude/README.md](claude/README.md).
+
+### Uninstalling
+
+```bash
+./uninstall.sh <module>    # uninstall one module
+./uninstall.sh --all       # uninstall everything
+```
+
+Every file is backed up as `.bak.YYYYMMDD-HHMMSS` before removal; the claude
+module also strips the settings this project added from
+`~/.claude/settings.json` while keeping your own settings. See each module
+README for details.
 
 ### Exporting local changes back into the repo
 

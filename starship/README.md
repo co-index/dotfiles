@@ -49,8 +49,13 @@ bash starship/export.sh
 卸载：
 
 ```bash
-rm -f ~/.config/starship.toml
+./uninstall.sh starship        # 从仓库根目录
+# 或
+bash starship/uninstall.sh     # 直接运行模块脚本
 ```
+
+脚本会先备份再删除 `~/.config/starship.toml`，等价于手动执行
+`rm -f ~/.config/starship.toml`。
 
 然后从 `~/.zshrc` 移除 `eval "$(starship init zsh)"` 这一行。
 
@@ -110,8 +115,13 @@ Restore: copy the `.bak.*` backup back to `~/.config/starship.toml`.
 Uninstall:
 
 ```bash
-rm -f ~/.config/starship.toml
+./uninstall.sh starship        # from the repo root
+# or
+bash starship/uninstall.sh     # run the module script directly
 ```
+
+The script backs up and then removes `~/.config/starship.toml`, equivalent
+to running `rm -f ~/.config/starship.toml` by hand.
 
 Then remove the `eval "$(starship init zsh)"` line from `~/.zshrc`.
 

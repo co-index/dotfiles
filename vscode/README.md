@@ -57,7 +57,15 @@ bash vscode/export.sh
 
 恢复：把对应的 `.bak.*` 备份复制回原文件名即可。
 
-卸载（删除本模块安装的配置文件）：
+卸载：
+
+```bash
+./uninstall.sh vscode        # 从仓库根目录
+# 或
+bash vscode/uninstall.sh     # 直接运行模块脚本
+```
+
+脚本会先备份再删除 settings.json 和 keybindings.json。也可以手动删除：
 
 ```bash
 rm -f "$HOME/Library/Application Support/Code/User/settings.json"
@@ -129,7 +137,16 @@ check it for accidental removals before committing.
 
 Restore: copy the matching `.bak.*` file back over the original.
 
-Uninstall (remove the files this module installed):
+Uninstall:
+
+```bash
+./uninstall.sh vscode        # from the repo root
+# or
+bash vscode/uninstall.sh     # run the module script directly
+```
+
+The script backs up and then removes settings.json and keybindings.json.
+Manual removal also works:
 
 ```bash
 rm -f "$HOME/Library/Application Support/Code/User/settings.json"

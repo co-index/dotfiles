@@ -63,6 +63,15 @@ fi
 expect_fail "unknown module fails" bash "$repo_dir/install.sh" no-such-module
 expect_fail "--all rejects extra arguments" bash "$repo_dir/install.sh" --all claude
 
+echo "== Top-level uninstaller =="
+check "bash -n uninstall.sh" bash -n "$repo_dir/uninstall.sh"
+check "bash -n claude/uninstall.sh" bash -n "$repo_dir/claude/uninstall.sh"
+check "bash -n vscode/uninstall.sh" bash -n "$repo_dir/vscode/uninstall.sh"
+check "bash -n starship/uninstall.sh" bash -n "$repo_dir/starship/uninstall.sh"
+check "uninstall: no args prints usage and exits 0" bash "$repo_dir/uninstall.sh"
+expect_fail "uninstall: unknown module fails" bash "$repo_dir/uninstall.sh" no-such-module
+expect_fail "uninstall: --all rejects extra arguments" bash "$repo_dir/uninstall.sh" --all claude
+
 echo "== Installer behavior (temporary HOME) =="
 tmp_home="$(mktemp -d)"
 trap 'rm -rf "$tmp_home"' EXIT
@@ -240,6 +249,50 @@ else
   failures=$((failures + 1))
 fi
 
+echo "== claude uninstall =="
+check "claude uninstall runs" \
+  env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/uninstall.sh" claude
+check "uninstall removed notify hook" test ! -e "$test_claude_dir/hooks/notify-macos.sh"
+check "uninstall removed statusline wrapper" test ! -e "$test_claude_dir/ccstatusline-usage-api.sh"
+check "uninstall removed ccstatusline settings" test ! -e "$tmp_home/.config/ccstatusline/settings.json"
+check "uninstall removed ccnotify" test ! -e "$tmp_home/.local/bin/ccnotify"
+check "uninstall removed state file" test ! -e "$test_claude_dir/ccnotify-state.json"
+check "uninstall kept settings.json valid" /usr/bin/python3 -m json.tool "$test_claude_dir/settings.json"
+
+if env CLAUDE_DIR="$test_claude_dir" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+import json
+import os
+
+claude_dir = os.environ["CLAUDE_DIR"]
+with open(os.path.join(claude_dir, "settings.json"), "r", encoding="utf-8") as fh:
+    settings = json.load(fh)
+
+assert settings.get("model") == "opus", "unrelated top-level key was lost"
+assert "statusLine" not in settings, "statusLine was not removed"
+
+hooks = settings.get("hooks", {})
+assert "Stop" not in hooks, "project-only Stop event should be gone"
+
+notification_commands = [
+    hook["command"]
+    for entry in hooks.get("Notification", [])
+    for hook in entry.get("hooks", [])
+]
+assert "/usr/local/bin/custom-notification-hook.sh" in notification_commands, "custom hook was removed"
+assert not any(
+    c.endswith("/hooks/notify-macos.sh") for c in notification_commands
+), "project hook still present"
+PY
+then
+  echo "ok: uninstall keeps custom settings and strips project entries"
+else
+  echo "FAIL: uninstall keeps custom settings and strips project entries"
+  failures=$((failures + 1))
+fi
+
+check "claude uninstall reruns" \
+  env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/uninstall.sh" claude
+
 echo "== starship module =="
 check "bash -n starship/install.sh" bash -n "$repo_dir/starship/install.sh"
 check "bash -n starship/export.sh" bash -n "$repo_dir/starship/export.sh"
@@ -266,6 +319,10 @@ else
   echo "FAIL: modified starship file is backed up"
   failures=$((failures + 1))
 fi
+
+check "starship uninstall runs" env HOME="$starship_home" bash "$repo_dir/starship/uninstall.sh"
+check "starship uninstall removed config" test ! -e "$starship_home/.config/starship.toml"
+check "starship uninstall reruns" env HOME="$starship_home" bash "$repo_dir/starship/uninstall.sh"
 
 starship_export_home="$tmp_home/starship-export-home"
 mkdir -p "$starship_export_home/.config"
@@ -322,6 +379,11 @@ else
   failures=$((failures + 1))
 fi
 
+check "vscode uninstall runs" env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/uninstall.sh"
+check "vscode uninstall removed settings" test ! -e "$vscode_user_dir/settings.json"
+check "vscode uninstall removed keybindings" test ! -e "$vscode_user_dir/keybindings.json"
+check "vscode uninstall reruns" env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/uninstall.sh"
+
 vscode_export_home="$tmp_home/vscode-export-home"
 mkdir -p "$vscode_export_home/Library/Application Support/Code/User"
 printf '{"export": "test"}\n' > "$vscode_export_home/Library/Application Support/Code/User/settings.json"
@@ -346,6 +408,16 @@ check "all: claude hook installed" test -x "$all_home/.claude/hooks/notify-macos
 check "all: ccnotify installed" test -x "$all_home/.local/bin/ccnotify"
 check "all: vscode settings installed" test -f "$all_home/Library/Application Support/Code/User/settings.json"
 check "all: starship config installed" test -f "$all_home/.config/starship.toml"
+
+echo "== uninstall --all =="
+check "uninstall --all runs" \
+  env HOME="$all_home" CLAUDE_CONFIG_DIR="$all_home/.claude" PATH="/usr/bin:/bin" \
+  bash "$repo_dir/uninstall.sh" --all
+check "all: claude hook removed" test ! -e "$all_home/.claude/hooks/notify-macos.sh"
+check "all: ccnotify removed" test ! -e "$all_home/.local/bin/ccnotify"
+check "all: vscode settings removed" test ! -e "$all_home/Library/Application Support/Code/User/settings.json"
+check "all: starship config removed" test ! -e "$all_home/.config/starship.toml"
+check "all: settings.json still valid" /usr/bin/python3 -m json.tool "$all_home/.claude/settings.json"
 
 echo
 if [[ "$failures" -gt 0 ]]; then

@@ -2,33 +2,33 @@
 set -euo pipefail
 
 # The one configuration point for the release source (see design doc).
-# CCNOTIFY_GITHUB_REPO overrides it, which the test suite uses to force
+# CCDOTS_GITHUB_REPO overrides it, which the test suite uses to force
 # placeholder behavior without touching the network.
-GITHUB_REPO="${CCNOTIFY_GITHUB_REPO:-co-index/dotfiles}"
+GITHUB_REPO="${CCDOTS_GITHUB_REPO:-co-index/dotfiles}"
 PLACEHOLDER_REPO="OWNER/REPO"
 
 claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-state_file="$claude_dir/ccnotify-state.json"
+state_file="$claude_dir/ccdots-state.json"
 tmp_dir=""
 
 usage() {
   cat <<EOF
-ccnotify - version manager for Claude Code macOS notifications and status line
+ccdots - version manager for Claude Code macOS notifications and status line
 
 Usage:
-  ccnotify help                 Show this help. No network access.
-  ccnotify version              Show the locally recorded version and paths.
-  ccnotify check                Check GitHub for the latest version. Never installs.
-  ccnotify upgrade              Install the latest available version.
-  ccnotify upgrade <version>    Install the specified version.
-  ccnotify rollback <version>   Install the specified older version.
-  ccnotify install <version>    Install the specified version.
+  ccdots help                 Show this help. No network access.
+  ccdots version              Show the locally recorded version and paths.
+  ccdots check                Check GitHub for the latest version. Never installs.
+  ccdots upgrade              Install the latest available version.
+  ccdots upgrade <version>    Install the specified version.
+  ccdots rollback <version>   Install the specified older version.
+  ccdots install <version>    Install the specified version.
 
 Examples:
-  ccnotify check
-  ccnotify upgrade
-  ccnotify upgrade v1.2.0
-  ccnotify rollback v1.1.0
+  ccdots check
+  ccdots upgrade
+  ccdots upgrade v1.2.0
+  ccdots rollback v1.1.0
 
 Paths:
   github repo:       $GITHUB_REPO
@@ -38,13 +38,13 @@ EOF
 }
 
 die() {
-  echo "ccnotify: $*" >&2
+  echo "ccdots: $*" >&2
   exit 1
 }
 
 require_repo() {
   if [[ "$GITHUB_REPO" == "$PLACEHOLDER_REPO" ]]; then
-    die "GITHUB_REPO is still the $PLACEHOLDER_REPO placeholder; edit claude/bin/ccnotify (or set CCNOTIFY_GITHUB_REPO) before using network commands"
+    die "GITHUB_REPO is still the $PLACEHOLDER_REPO placeholder; edit claude/bin/ccdots (or set CCDOTS_GITHUB_REPO) before using network commands"
   fi
 }
 
@@ -99,7 +99,7 @@ except Exception:
 }
 
 cmd_version() {
-  echo "ccnotify - Claude Code macOS notifications and status line"
+  echo "ccdots - Claude Code macOS notifications and status line"
   echo "installed version: $(state_value version)"
   echo "github repo:       $GITHUB_REPO"
   echo "state file:        $state_file"
@@ -118,7 +118,7 @@ cmd_check() {
     echo "You are up to date."
   else
     echo "A different version is available."
-    echo "Run 'ccnotify upgrade' or 'ccnotify install $latest' to install it."
+    echo "Run 'ccdots upgrade' or 'ccdots install $latest' to install it."
   fi
 }
 
@@ -131,7 +131,7 @@ install_version() {
   tmp_dir="$(mktemp -d)"
   trap 'if [[ -n "$tmp_dir" ]]; then rm -rf "$tmp_dir"; fi' EXIT
 
-  local archive="$tmp_dir/ccnotify-src.tar.gz"
+  local archive="$tmp_dir/ccdots-src.tar.gz"
   echo "Downloading $GITHUB_REPO at $version ..."
   if ! curl -fsSL -o "$archive" "https://github.com/$GITHUB_REPO/archive/refs/tags/$version.tar.gz"; then
     die "failed to download version $version (does the tag exist?)"
@@ -151,14 +151,14 @@ install_version() {
   previous="$(state_value version)"
 
   echo "Running the $version installer ..."
-  if ! CCNOTIFY_VERSION="$version" \
-       CCNOTIFY_PREVIOUS_VERSION="$previous" \
-       CCNOTIFY_REPO="$GITHUB_REPO" \
+  if ! CCDOTS_VERSION="$version" \
+       CCDOTS_PREVIOUS_VERSION="$previous" \
+       CCDOTS_REPO="$GITHUB_REPO" \
        bash "$src_dir/claude/install.sh"; then
     die "the $version installer failed; your previous files remain in their .bak.* backups"
   fi
 
-  echo "ccnotify: $label to $version complete."
+  echo "ccdots: $label to $version complete."
 }
 
 main() {
@@ -185,15 +185,15 @@ main() {
       fi
       ;;
     rollback)
-      [[ $# -ge 2 ]] || die "rollback requires a version, for example: ccnotify rollback v1.1.0"
+      [[ $# -ge 2 ]] || die "rollback requires a version, for example: ccdots rollback v1.1.0"
       install_version "$2" "rollback"
       ;;
     install)
-      [[ $# -ge 2 ]] || die "install requires a version, for example: ccnotify install v1.2.0"
+      [[ $# -ge 2 ]] || die "install requires a version, for example: ccdots install v1.2.0"
       install_version "$2" "install"
       ;;
     *)
-      die "unknown command: $cmd (run 'ccnotify help')"
+      die "unknown command: $cmd (run 'ccdots help')"
       ;;
   esac
 }

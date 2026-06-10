@@ -162,28 +162,42 @@ def activate_bundle_id():
     }.get(os.environ.get("TERM_PROGRAM", ""), "")
 
 
-# Prefer the project's own ClaudeNotifier.app (built by build-notifier.sh,
-# Claude icon, modern notification API), then terminal-notifier, then the
-# non-clickable osascript fallback.
-claude_dir = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
-claude_notifier = os.path.join(
-    claude_dir, "ClaudeNotifier.app", "Contents", "MacOS", "ClaudeNotifier"
+def find_ccnotify():
+    # The ccnotify helper (https://github.com/co-index/ccnotify) posts
+    # clickable notifications. Several unrelated tools are also named
+    # "ccnotify", so only accept a shim that references the ccnotify.app
+    # bundle the helper installs.
+    candidates = [
+        "/opt/homebrew/bin/ccnotify",
+        "/usr/local/bin/ccnotify",
+        shutil.which("ccnotify") or "",
+    ]
+    for path in candidates:
+        if not path or not os.access(path, os.X_OK):
+            continue
+        try:
+            with open(path, "rb") as fh:
+                head = fh.read(4096)
+        except Exception:
+            continue
+        if b"ccnotify.app" in head:
+            return path
+    return ""
+
+
+# Prefer ccnotify (modern notification API, click jumps back to the app),
+# then terminal-notifier, then the non-clickable osascript fallback.
+notifier = find_ccnotify() or shutil.which("terminal-notifier") or next(
+    (
+        path
+        for path in (
+            "/opt/homebrew/bin/terminal-notifier",
+            "/usr/local/bin/terminal-notifier",
+        )
+        if os.path.exists(path)
+    ),
+    "",
 )
-notifier = ""
-if os.access(claude_notifier, os.X_OK):
-    notifier = claude_notifier
-else:
-    notifier = shutil.which("terminal-notifier") or next(
-        (
-            path
-            for path in (
-                "/opt/homebrew/bin/terminal-notifier",
-                "/usr/local/bin/terminal-notifier",
-            )
-            if os.path.exists(path)
-        ),
-        "",
-    )
 
 if notifier:
     # Clickable notification; -activate focuses the app that was running

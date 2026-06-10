@@ -7,7 +7,7 @@ settings_path="$claude_dir/settings.json"
 hooks_dir="$claude_dir/hooks"
 statusline_dir="$HOME/.config/ccstatusline"
 bin_dir="$HOME/.local/bin"
-state_path="$claude_dir/ccnotify-state.json"
+state_path="$claude_dir/ccdots-state.json"
 
 # Skips the backup when the existing file already matches the replacement,
 # so reruns do not pile up identical .bak.* files. settings.json is merged in
@@ -28,15 +28,30 @@ backup_file "$hooks_dir/notify-macos.sh" "$repo_dir/scripts/notify-macos.sh"
 backup_file "$claude_dir/ccstatusline-usage-api.sh" "$repo_dir/scripts/ccstatusline-usage-api.sh"
 backup_file "$statusline_dir/settings.json" "$repo_dir/config/ccstatusline-settings.json"
 backup_file "$settings_path"
-backup_file "$bin_dir/ccnotify" "$repo_dir/bin/ccnotify"
+backup_file "$bin_dir/ccdots" "$repo_dir/bin/ccdots"
 
 cp "$repo_dir/scripts/notify-macos.sh" "$hooks_dir/notify-macos.sh"
 cp "$repo_dir/scripts/ccstatusline-usage-api.sh" "$claude_dir/ccstatusline-usage-api.sh"
 cp "$repo_dir/config/ccstatusline-settings.json" "$statusline_dir/settings.json"
-cp "$repo_dir/bin/ccnotify" "$bin_dir/ccnotify"
-chmod +x "$hooks_dir/notify-macos.sh" "$claude_dir/ccstatusline-usage-api.sh" "$bin_dir/ccnotify"
+cp "$repo_dir/bin/ccdots" "$bin_dir/ccdots"
+chmod +x "$hooks_dir/notify-macos.sh" "$claude_dir/ccstatusline-usage-api.sh" "$bin_dir/ccdots"
 
-bash "$repo_dir/scripts/build-notifier.sh"
+# Migration from earlier layouts: the version manager used to be installed
+# as ~/.local/bin/ccnotify (the name now belongs to the standalone notifier,
+# https://github.com/co-index/ccnotify), and notifications used to come from
+# a ClaudeNotifier.app compiled into the Claude config dir.
+if [[ -f "$bin_dir/ccnotify" ]] && head -c 4096 "$bin_dir/ccnotify" | grep -q "version manager for Claude Code"; then
+  rm -f "$bin_dir/ccnotify"
+  echo "Removed the old $bin_dir/ccnotify (the version manager is now ccdots)."
+fi
+if [[ -f "$claude_dir/ccnotify-state.json" && ! -f "$state_path" ]]; then
+  mv "$claude_dir/ccnotify-state.json" "$state_path"
+fi
+rm -f "$claude_dir/ccnotify-state.json"
+if [[ -d "$claude_dir/ClaudeNotifier.app" ]]; then
+  rm -rf "$claude_dir/ClaudeNotifier.app"
+  echo "Removed the old ClaudeNotifier.app (notifications now use ccnotify)."
+fi
 
 /usr/bin/python3 - "$settings_path" "$claude_dir" <<'PY'
 import json
@@ -93,20 +108,20 @@ with open(settings_path, "w", encoding="utf-8") as fh:
     fh.write("\n")
 PY
 
-/usr/bin/python3 - "$state_path" "$repo_dir/bin/ccnotify" <<'PY'
+/usr/bin/python3 - "$state_path" "$repo_dir/bin/ccdots" <<'PY'
 import datetime
 import json
 import os
 import sys
 
 state_path = sys.argv[1]
-ccnotify_path = sys.argv[2]
+ccdots_path = sys.argv[2]
 
 def default_repo():
-    # bin/ccnotify is the single configuration point for the repo name;
+    # bin/ccdots is the single configuration point for the repo name;
     # read its GITHUB_REPO default instead of duplicating it here.
     try:
-        with open(ccnotify_path, "r", encoding="utf-8") as fh:
+        with open(ccdots_path, "r", encoding="utf-8") as fh:
             for line in fh:
                 line = line.strip()
                 if not line.startswith("GITHUB_REPO="):
@@ -129,13 +144,13 @@ if os.path.exists(state_path):
     except Exception:
         old = {}
 
-version = os.environ.get("CCNOTIFY_VERSION") or ""
+version = os.environ.get("CCDOTS_VERSION") or ""
 state = {
     "version": version or "dev",
-    "repo": os.environ.get("CCNOTIFY_REPO") or old.get("repo") or default_repo(),
+    "repo": os.environ.get("CCDOTS_REPO") or old.get("repo") or default_repo(),
     "installedAt": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     "source": "release" if version else "local",
-    "previousVersion": os.environ.get("CCNOTIFY_PREVIOUS_VERSION") or old.get("version"),
+    "previousVersion": os.environ.get("CCDOTS_PREVIOUS_VERSION") or old.get("version"),
 }
 
 with open(state_path, "w", encoding="utf-8") as fh:
@@ -147,10 +162,17 @@ case ":$PATH:" in
   *":$bin_dir:"*) ;;
   *)
     echo "Note: $bin_dir is not on your PATH."
-    echo "Add this line to your shell profile to use the ccnotify command:"
+    echo "Add this line to your shell profile to use the ccdots command:"
     echo '  export PATH="$HOME/.local/bin:$PATH"'
     ;;
 esac
+
+if ! { [[ -x /opt/homebrew/bin/ccnotify || -x /usr/local/bin/ccnotify ]] \
+    || command -v terminal-notifier >/dev/null 2>&1; }; then
+  echo "Note: for clickable notifications, install the ccnotify helper:"
+  echo "  brew install co-index/tap/ccnotify"
+  echo "Without it, notifications fall back to a non-clickable osascript banner."
+fi
 
 echo "Installed Claude Code notifications and status line."
 echo "Restart Claude Code to load the updated settings."

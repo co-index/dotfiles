@@ -15,7 +15,7 @@ remove_file() {
   fi
 }
 
-# Built artifact, rebuilt by install.sh; no backup needed.
+# Leftover from older installs that compiled a notifier app; no backup needed.
 if [[ -d "$claude_dir/ClaudeNotifier.app" ]]; then
   rm -rf "$claude_dir/ClaudeNotifier.app"
   echo "Removed $claude_dir/ClaudeNotifier.app."
@@ -24,7 +24,15 @@ fi
 remove_file "$claude_dir/hooks/notify-macos.sh"
 remove_file "$claude_dir/ccstatusline-usage-api.sh"
 remove_file "$statusline_dir/settings.json"
-remove_file "$bin_dir/ccnotify"
+remove_file "$bin_dir/ccdots"
+remove_file "$claude_dir/ccdots-state.json"
+
+# Older installs used the ccnotify name for the version manager; only touch
+# it if it is actually ours (the standalone ccnotify notifier is unrelated
+# and managed by brew).
+if [[ -f "$bin_dir/ccnotify" ]] && head -c 4096 "$bin_dir/ccnotify" | grep -q "version manager for Claude Code"; then
+  remove_file "$bin_dir/ccnotify"
+fi
 remove_file "$claude_dir/ccnotify-state.json"
 
 if [[ -f "$settings_path" ]]; then

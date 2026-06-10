@@ -13,7 +13,7 @@ Usage:
   ./install.sh --all
 
 Modules:
-  claude     Claude Code macOS notifications, status line, and ccnotify
+  claude     Claude Code macOS notifications, status line, and ccdots
   vscode     VS Code settings, keybindings, and extensions
   starship   Starship prompt configuration
 

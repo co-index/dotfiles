@@ -13,7 +13,7 @@ Usage:
   ./uninstall.sh --all
 
 Modules:
-  claude     Remove Claude Code notifications, status line, and ccnotify
+  claude     Remove Claude Code notifications, status line, and ccdots
   vscode     Remove VS Code settings and keybindings (extensions stay)
   starship   Remove the Starship prompt configuration
 

@@ -3,9 +3,6 @@ set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 failures=0
-# Skip the ClaudeNotifier swift build during installer runs; the dedicated
-# build test below exercises it once.
-export CCNOTIFY_SKIP_BUILD=1
 
 check() {
   local name="$1"
@@ -49,9 +46,6 @@ echo "== Syntax and config checks =="
 check "bash -n claude/install.sh" bash -n "$repo_dir/claude/install.sh"
 check "bash -n claude/scripts/notify-macos.sh" bash -n "$repo_dir/claude/scripts/notify-macos.sh"
 check "bash -n claude/scripts/ccstatusline-usage-api.sh" bash -n "$repo_dir/claude/scripts/ccstatusline-usage-api.sh"
-check "bash -n claude/scripts/build-notifier.sh" bash -n "$repo_dir/claude/scripts/build-notifier.sh"
-check "claude icon asset exists" test -s "$repo_dir/claude/assets/ccnotify.icns"
-check "notifier swift source exists" test -s "$repo_dir/claude/notifier/main.swift"
 check "bash -n scripts/test.sh" bash -n "$repo_dir/scripts/test.sh"
 check "json: claude-settings.example.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/claude-settings.example.json"
 check "json: ccstatusline-settings.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/ccstatusline-settings.json"
@@ -173,13 +167,13 @@ else
   failures=$((failures + 1))
 fi
 
-echo "== ccnotify offline checks =="
-check "bash -n claude/bin/ccnotify" bash -n "$repo_dir/claude/bin/ccnotify"
-check "ccnotify help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccnotify" help
-check "ccnotify with no args shows help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccnotify"
-check "ccnotify version" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccnotify" version
+echo "== ccdots offline checks =="
+check "bash -n claude/bin/ccdots" bash -n "$repo_dir/claude/bin/ccdots"
+check "ccdots help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccdots" help
+check "ccdots with no args shows help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccdots"
+check "ccdots version" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccdots" version
 
-version_output="$(env CLAUDE_CONFIG_DIR="$tmp_home/empty-claude" bash "$repo_dir/claude/bin/ccnotify" version 2>/dev/null)"
+version_output="$(env CLAUDE_CONFIG_DIR="$tmp_home/empty-claude" bash "$repo_dir/claude/bin/ccdots" version 2>/dev/null)"
 if grep -q "installed version: unknown" <<<"$version_output"
 then
   echo "ok: missing state reports unknown version"
@@ -189,21 +183,21 @@ else
 fi
 
 expect_fail "check fails fast with placeholder repo" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccnotify" check
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCDOTS_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccdots" check
 expect_fail "upgrade fails fast with placeholder repo" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccnotify" upgrade
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCDOTS_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccdots" upgrade
 expect_fail "install requires a version" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccnotify" install
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCDOTS_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccdots" install
 expect_fail "rollback requires a version" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccnotify" rollback
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCDOTS_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/claude/bin/ccdots" rollback
 expect_fail "unknown command fails" \
-  env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccnotify" frobnicate
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccdots" frobnicate
 
-echo "== Installed ccnotify and state file =="
-check "ccnotify installed to ~/.local/bin" test -x "$tmp_home/.local/bin/ccnotify"
-check "state file is valid JSON" /usr/bin/python3 -m json.tool "$test_claude_dir/ccnotify-state.json"
+echo "== Installed ccdots and state file =="
+check "ccdots installed to ~/.local/bin" test -x "$tmp_home/.local/bin/ccdots"
+check "state file is valid JSON" /usr/bin/python3 -m json.tool "$test_claude_dir/ccdots-state.json"
 
-if env STATE="$test_claude_dir/ccnotify-state.json" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+if env STATE="$test_claude_dir/ccdots-state.json" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
 import json
 import os
 
@@ -222,21 +216,21 @@ else
   failures=$((failures + 1))
 fi
 
-installed_version_output="$(env CLAUDE_CONFIG_DIR="$test_claude_dir" "$tmp_home/.local/bin/ccnotify" version 2>/dev/null)"
+installed_version_output="$(env CLAUDE_CONFIG_DIR="$test_claude_dir" "$tmp_home/.local/bin/ccdots" version 2>/dev/null)"
 if grep -q "installed version: dev" <<<"$installed_version_output"
 then
-  echo "ok: installed ccnotify reads recorded version"
+  echo "ok: installed ccdots reads recorded version"
 else
-  echo "FAIL: installed ccnotify reads recorded version"
+  echo "FAIL: installed ccdots reads recorded version"
   failures=$((failures + 1))
 fi
 
 check "release-style install runs" \
   env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" \
-  CCNOTIFY_VERSION="v9.9.9" CCNOTIFY_REPO="example/repo" \
+  CCDOTS_VERSION="v9.9.9" CCDOTS_REPO="example/repo" \
   bash "$repo_dir/claude/install.sh"
 
-if env STATE="$test_claude_dir/ccnotify-state.json" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+if env STATE="$test_claude_dir/ccdots-state.json" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
 import json
 import os
 
@@ -255,19 +249,25 @@ else
   failures=$((failures + 1))
 fi
 
-echo "== ClaudeNotifier build =="
-if command -v swiftc >/dev/null 2>&1; then
-  notifier_home="$tmp_home/notifier-home"
-  mkdir -p "$notifier_home/.claude"
-  check "build-notifier.sh builds the app" \
-    env CLAUDE_CONFIG_DIR="$notifier_home/.claude" CCNOTIFY_SKIP_BUILD=0 \
-    bash "$repo_dir/claude/scripts/build-notifier.sh"
-  check "ClaudeNotifier binary exists" \
-    test -x "$notifier_home/.claude/ClaudeNotifier.app/Contents/MacOS/ClaudeNotifier"
-  check "ClaudeNotifier signature verifies" \
-    codesign --verify "$notifier_home/.claude/ClaudeNotifier.app"
+echo "== Migration from the old ccnotify layout =="
+migrate_home="$tmp_home/migrate-home"
+migrate_claude_dir="$migrate_home/.claude"
+mkdir -p "$migrate_home/.local/bin" "$migrate_claude_dir/ClaudeNotifier.app/Contents"
+printf '#!/usr/bin/env bash\n# ccnotify - version manager for Claude Code macOS notifications and status line\n' \
+  > "$migrate_home/.local/bin/ccnotify"
+chmod +x "$migrate_home/.local/bin/ccnotify"
+printf '{"version": "v1.1.0", "repo": "example/old"}\n' > "$migrate_claude_dir/ccnotify-state.json"
+check "install migrates old layout" \
+  env HOME="$migrate_home" CLAUDE_CONFIG_DIR="$migrate_claude_dir" bash "$repo_dir/claude/install.sh"
+check "migration removed old ccnotify version manager" test ! -e "$migrate_home/.local/bin/ccnotify"
+check "migration removed old state file" test ! -e "$migrate_claude_dir/ccnotify-state.json"
+check "migration removed ClaudeNotifier.app" test ! -e "$migrate_claude_dir/ClaudeNotifier.app"
+check "migration installed ccdots" test -x "$migrate_home/.local/bin/ccdots"
+if grep -q '"repo": "example/old"' "$migrate_claude_dir/ccdots-state.json"; then
+  echo "ok: migration carried the old state over"
 else
-  echo "ok: swiftc not available; skipped the ClaudeNotifier build test"
+  echo "FAIL: migration carried the old state over"
+  failures=$((failures + 1))
 fi
 
 echo "== claude uninstall =="
@@ -278,8 +278,8 @@ check "uninstall removed notify hook" test ! -e "$test_claude_dir/hooks/notify-m
 check "uninstall removed ClaudeNotifier" test ! -e "$test_claude_dir/ClaudeNotifier.app"
 check "uninstall removed statusline wrapper" test ! -e "$test_claude_dir/ccstatusline-usage-api.sh"
 check "uninstall removed ccstatusline settings" test ! -e "$tmp_home/.config/ccstatusline/settings.json"
-check "uninstall removed ccnotify" test ! -e "$tmp_home/.local/bin/ccnotify"
-check "uninstall removed state file" test ! -e "$test_claude_dir/ccnotify-state.json"
+check "uninstall removed ccdots" test ! -e "$tmp_home/.local/bin/ccdots"
+check "uninstall removed state file" test ! -e "$test_claude_dir/ccdots-state.json"
 check "uninstall kept settings.json valid" /usr/bin/python3 -m json.tool "$test_claude_dir/settings.json"
 
 if env CLAUDE_DIR="$test_claude_dir" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
@@ -468,7 +468,7 @@ check "install --all runs" \
   env HOME="$all_home" CLAUDE_CONFIG_DIR="$all_home/.claude" PATH="/usr/bin:/bin" \
   bash "$repo_dir/install.sh" --all
 check "all: claude hook installed" test -x "$all_home/.claude/hooks/notify-macos.sh"
-check "all: ccnotify installed" test -x "$all_home/.local/bin/ccnotify"
+check "all: ccdots installed" test -x "$all_home/.local/bin/ccdots"
 check "all: vscode settings installed" test -f "$all_home/Library/Application Support/Code/User/settings.json"
 check "all: starship config installed" test -f "$all_home/.config/starship.toml"
 
@@ -477,7 +477,7 @@ check "uninstall --all runs" \
   env HOME="$all_home" CLAUDE_CONFIG_DIR="$all_home/.claude" PATH="/usr/bin:/bin" \
   bash "$repo_dir/uninstall.sh" --all
 check "all: claude hook removed" test ! -e "$all_home/.claude/hooks/notify-macos.sh"
-check "all: ccnotify removed" test ! -e "$all_home/.local/bin/ccnotify"
+check "all: ccdots removed" test ! -e "$all_home/.local/bin/ccdots"
 check "all: vscode settings removed" test ! -e "$all_home/Library/Application Support/Code/User/settings.json"
 check "all: starship config removed" test ! -e "$all_home/.config/starship.toml"
 check "all: settings.json still valid" /usr/bin/python3 -m json.tool "$all_home/.claude/settings.json"

@@ -12,7 +12,7 @@ before overwriting them.
 
 | 模块 | 内容 | 安装位置 | 额外前置条件 |
 |---|---|---|---|
-| [claude](claude/README.md) | Claude Code macOS 通知、状态栏、`ccnotify` 版本管理 | `~/.claude`、`~/.config/ccstatusline`、`~/.local/bin` | Claude Code；Node.js + npm |
+| [claude](claude/README.md) | Claude Code macOS 通知、状态栏、`ccdots` 版本管理 | `~/.claude`、`~/.config/ccstatusline`、`~/.local/bin` | Claude Code；Node.js + npm |
 | [vscode](vscode/README.md) | VS Code settings、keybindings、插件清单 | `~/Library/Application Support/Code/User` | VS Code；装插件需 `code` CLI |
 | [starship](starship/README.md) | Starship 终端提示符配置 | `~/.config/starship.toml` | starship |
 
@@ -22,7 +22,8 @@ Claude Code 状态栏（claude 模块）：
 
 ![Claude Code 状态栏](docs/images/claude-statusline.png)
 
-macOS 通知（claude 模块）：
+macOS 通知（claude 模块，点击横幅跳回运行 Claude Code 的应用，由独立项目
+[ccnotify](https://github.com/co-index/ccnotify) 提供）：
 
 ![macOS 通知](docs/images/claude-notification.png)
 
@@ -61,7 +62,7 @@ git pull
 ./install.sh <module>
 ```
 
-claude 模块还提供 `ccnotify` 命令，按 GitHub Release 检查、升级和回滚版本，
+claude 模块还提供 `ccdots` 命令，按 GitHub Release 检查、升级和回滚版本，
 详见 [claude/README.md](claude/README.md)。
 
 ### 卸载
@@ -100,7 +101,7 @@ bash scripts/test.sh
 
 | Module | Contents | Installs to | Extra prerequisites |
 |---|---|---|---|
-| [claude](claude/README.md) | Claude Code macOS notifications, status line, `ccnotify` version manager | `~/.claude`, `~/.config/ccstatusline`, `~/.local/bin` | Claude Code; Node.js + npm |
+| [claude](claude/README.md) | Claude Code macOS notifications, status line, `ccdots` version manager | `~/.claude`, `~/.config/ccstatusline`, `~/.local/bin` | Claude Code; Node.js + npm |
 | [vscode](vscode/README.md) | VS Code settings, keybindings, extension list | `~/Library/Application Support/Code/User` | VS Code; `code` CLI for extensions |
 | [starship](starship/README.md) | Starship prompt configuration | `~/.config/starship.toml` | starship |
 
@@ -110,7 +111,9 @@ The Claude Code status line (claude module):
 
 ![Claude Code status line](docs/images/claude-statusline.png)
 
-macOS notifications (claude module):
+macOS notifications (claude module; clicking the banner jumps back to the
+app running Claude Code, powered by the standalone
+[ccnotify](https://github.com/co-index/ccnotify) project):
 
 ![macOS notification](docs/images/claude-notification.png)
 
@@ -151,7 +154,7 @@ git pull
 ./install.sh <module>
 ```
 
-The claude module also ships `ccnotify`, which checks, upgrades, and rolls
+The claude module also ships `ccdots`, which checks, upgrades, and rolls
 back by GitHub release — see [claude/README.md](claude/README.md).
 
 ### Uninstalling

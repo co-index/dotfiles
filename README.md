@@ -22,6 +22,8 @@ multi-line status line powered by `ccstatusline`.
 ~/.claude/hooks/notify-macos.sh
 ~/.claude/ccstatusline-usage-api.sh
 ~/.config/ccstatusline/settings.json
+~/.local/bin/ccnotify
+~/.claude/ccnotify-state.json
 ```
 
 并把以下配置合并到 Claude Code 设置文件：
@@ -114,6 +116,29 @@ Claude Code 配置示例：
 
 `Notification` 事件会提示 Claude 需要你关注，`Stop` 事件会提示当前任务已结束。
 
+### 更新与回滚
+
+安装脚本会把 `ccnotify` 命令安装到 `~/.local/bin/ccnotify`，用于按 GitHub
+Release 版本管理本套配置。所有安装操作都需要显式执行，`check` 只查询、
+永远不会自动安装：
+
+```bash
+ccnotify check            # 检查最新版本，只查询不安装
+ccnotify upgrade          # 升级到最新版本
+ccnotify upgrade v1.2.0   # 安装指定版本
+ccnotify rollback v1.1.0  # 回滚到指定旧版本
+ccnotify version          # 查看当前安装的版本和路径
+```
+
+升级和回滚都会下载对应版本的源码包，并运行那个版本自带的 `install.sh`，
+所以同样会先备份再覆盖。
+
+如果 `~/.local/bin` 不在 `PATH` 中，安装脚本会提示你在 shell 配置里加入：
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
 ### 自定义
 
 - 修改 `config/ccstatusline-settings.json` 可调整状态栏行、颜色和用量展示。
@@ -123,6 +148,12 @@ Claude Code 配置示例：
 修改后重新运行 `./install.sh`，或手动复制对应文件到安装位置。
 
 ### 测试
+
+运行离线测试套件（语法检查、配置校验和临时目录安装测试）：
+
+```bash
+bash scripts/test.sh
+```
 
 测试 macOS 通知脚本：
 
@@ -149,6 +180,8 @@ printf '{"cwd":"%s"}' "$PWD" | scripts/ccstatusline-usage-api.sh
 rm -f ~/.claude/hooks/notify-macos.sh
 rm -f ~/.claude/ccstatusline-usage-api.sh
 rm -f ~/.config/ccstatusline/settings.json
+rm -f ~/.local/bin/ccnotify
+rm -f ~/.claude/ccnotify-state.json
 ```
 
 然后从 `~/.claude/settings.json` 中移除本项目添加的 `statusLine`、`Notification`
@@ -192,6 +225,8 @@ The installer writes these files:
 ~/.claude/hooks/notify-macos.sh
 ~/.claude/ccstatusline-usage-api.sh
 ~/.config/ccstatusline/settings.json
+~/.local/bin/ccnotify
+~/.claude/ccnotify-state.json
 ```
 
 It also updates the Claude Code settings file:
@@ -286,6 +321,30 @@ Claude Code settings example:
 `Notification` means Claude needs attention. `Stop` means the current task has
 finished.
 
+### Update and Rollback
+
+The installer also installs a `ccnotify` command to `~/.local/bin/ccnotify`
+that manages this setup by GitHub release version. Every install is explicit;
+`check` only reports and never installs anything:
+
+```bash
+ccnotify check            # check the latest version, report only
+ccnotify upgrade          # install the latest version
+ccnotify upgrade v1.2.0   # install a specific version
+ccnotify rollback v1.1.0  # roll back to an older version
+ccnotify version          # show the installed version and paths
+```
+
+Upgrades and rollbacks download the source archive for the requested version
+and run that version's own `install.sh`, so the usual backups still apply.
+
+If `~/.local/bin` is not on your `PATH`, the installer prints a snippet to add
+to your shell profile:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
 ### Customization
 
 - Edit `config/ccstatusline-settings.json` to change status line rows, colors,
@@ -299,6 +358,13 @@ After changing a file, run `./install.sh` again or copy the changed file into
 the install location manually.
 
 ### Testing
+
+Run the offline test suite (syntax checks, config validation, and a
+temporary-directory install test):
+
+```bash
+bash scripts/test.sh
+```
 
 Test the macOS notification hook:
 
@@ -326,6 +392,8 @@ To uninstall, remove the files installed by this project:
 rm -f ~/.claude/hooks/notify-macos.sh
 rm -f ~/.claude/ccstatusline-usage-api.sh
 rm -f ~/.config/ccstatusline/settings.json
+rm -f ~/.local/bin/ccnotify
+rm -f ~/.claude/ccnotify-state.json
 ```
 
 Then remove the added `statusLine`, `Notification`, and `Stop` settings from

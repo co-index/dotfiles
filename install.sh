@@ -34,6 +34,11 @@ fi
 
 selected=()
 if [[ "$1" == "--all" ]]; then
+  if [[ $# -gt 1 ]]; then
+    echo "install.sh: --all takes no further arguments" >&2
+    usage >&2
+    exit 1
+  fi
   selected=("${modules[@]}")
 else
   for arg in "$@"; do

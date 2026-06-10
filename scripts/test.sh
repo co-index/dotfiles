@@ -45,6 +45,7 @@ else
   failures=$((failures + 1))
 fi
 expect_fail "unknown module fails" bash "$repo_dir/install.sh" no-such-module
+expect_fail "--all rejects extra arguments" bash "$repo_dir/install.sh" --all claude
 
 echo "== Installer behavior (temporary HOME) =="
 tmp_home="$(mktemp -d)"

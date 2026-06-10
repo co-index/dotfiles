@@ -1,0 +1,198 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# The one configuration point for the release source (see design doc).
+# Replace OWNER/REPO with the real GitHub repository before publishing.
+# CCNOTIFY_GITHUB_REPO overrides it, which the test suite uses to force
+# placeholder behavior without touching the network.
+GITHUB_REPO="${CCNOTIFY_GITHUB_REPO:-OWNER/REPO}"
+PLACEHOLDER_REPO="OWNER/REPO"
+
+claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+state_file="$claude_dir/ccnotify-state.json"
+
+usage() {
+  cat <<EOF
+ccnotify - version manager for Claude Code macOS notifications and status line
+
+Usage:
+  ccnotify help                 Show this help. No network access.
+  ccnotify version              Show the locally recorded version and paths.
+  ccnotify check                Check GitHub for the latest version. Never installs.
+  ccnotify upgrade              Install the latest available version.
+  ccnotify upgrade <version>    Install the specified version.
+  ccnotify rollback <version>   Install the specified older version.
+  ccnotify install <version>    Install the specified version.
+
+Examples:
+  ccnotify check
+  ccnotify upgrade
+  ccnotify upgrade v1.2.0
+  ccnotify rollback v1.1.0
+
+Paths:
+  github repo:       $GITHUB_REPO
+  state file:        $state_file
+  claude config dir: $claude_dir
+EOF
+}
+
+die() {
+  echo "ccnotify: $*" >&2
+  exit 1
+}
+
+require_repo() {
+  if [[ "$GITHUB_REPO" == "$PLACEHOLDER_REPO" ]]; then
+    die "GITHUB_REPO is still the $PLACEHOLDER_REPO placeholder; edit bin/ccnotify (or set CCNOTIFY_GITHUB_REPO) before using network commands"
+  fi
+}
+
+require_curl() {
+  command -v curl >/dev/null 2>&1 || die "curl is required for this command"
+}
+
+state_value() {
+  /usr/bin/python3 - "$state_file" "$1" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+key = sys.argv[2]
+try:
+    with open(path, "r", encoding="utf-8") as fh:
+        state = json.load(fh)
+except Exception:
+    print("unknown", end="")
+else:
+    value = state.get(key)
+    if isinstance(value, str) and value:
+        print(value, end="")
+    else:
+        print("unknown", end="")
+PY
+}
+
+latest_version() {
+  local tag
+  tag="$(curl -fsSL "https://api.github.com/repos/$GITHUB_REPO/releases/latest" 2>/dev/null \
+    | /usr/bin/python3 -c 'import json, sys
+try:
+    print(json.load(sys.stdin).get("tag_name") or "", end="")
+except Exception:
+    pass' || true)"
+  if [[ -z "$tag" ]]; then
+    tag="$(curl -fsSL "https://api.github.com/repos/$GITHUB_REPO/tags?per_page=1" 2>/dev/null \
+      | /usr/bin/python3 -c 'import json, sys
+try:
+    tags = json.load(sys.stdin)
+    print((tags[0].get("name") or "") if tags else "", end="")
+except Exception:
+    pass' || true)"
+  fi
+  [[ -n "$tag" ]] || die "could not determine the latest version for $GITHUB_REPO (no releases or tags reachable)"
+  printf '%s' "$tag"
+}
+
+cmd_version() {
+  echo "ccnotify - Claude Code macOS notifications and status line"
+  echo "installed version: $(state_value version)"
+  echo "github repo:       $GITHUB_REPO"
+  echo "state file:        $state_file"
+  echo "claude config dir: $claude_dir"
+}
+
+cmd_check() {
+  require_repo
+  require_curl
+  local installed latest
+  installed="$(state_value version)"
+  latest="$(latest_version)"
+  echo "installed: $installed"
+  echo "latest:    $latest"
+  if [[ "$installed" == "$latest" ]]; then
+    echo "You are up to date."
+  else
+    echo "A different version is available."
+    echo "Run 'ccnotify upgrade' or 'ccnotify install $latest' to install it."
+  fi
+}
+
+install_version() {
+  local version="$1"
+  local label="$2"
+  require_repo
+  require_curl
+
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  trap 'rm -rf "$tmp_dir"' EXIT
+
+  local archive="$tmp_dir/ccnotify-src.tar.gz"
+  echo "Downloading $GITHUB_REPO at $version ..."
+  if ! curl -fsSL -o "$archive" "https://github.com/$GITHUB_REPO/archive/refs/tags/$version.tar.gz"; then
+    die "failed to download version $version (does the tag exist?)"
+  fi
+
+  if ! tar -xzf "$archive" -C "$tmp_dir"; then
+    die "failed to extract the downloaded archive"
+  fi
+
+  local src_dir
+  src_dir="$(find "$tmp_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+  if [[ -z "$src_dir" || ! -f "$src_dir/install.sh" ]]; then
+    die "version $version does not contain install.sh; cannot install it"
+  fi
+
+  local previous
+  previous="$(state_value version)"
+
+  echo "Running the $version installer ..."
+  if ! CCNOTIFY_VERSION="$version" \
+       CCNOTIFY_PREVIOUS_VERSION="$previous" \
+       CCNOTIFY_REPO="$GITHUB_REPO" \
+       bash "$src_dir/install.sh"; then
+    die "the $version installer failed; your previous files remain in their .bak.* backups"
+  fi
+
+  echo "ccnotify: $label to $version complete."
+}
+
+main() {
+  local cmd="${1:-help}"
+  case "$cmd" in
+    help|-h|--help)
+      usage
+      ;;
+    version)
+      cmd_version
+      ;;
+    check)
+      cmd_check
+      ;;
+    upgrade)
+      require_repo
+      require_curl
+      if [[ $# -ge 2 ]]; then
+        install_version "$2" "upgrade"
+      else
+        local target
+        target="$(latest_version)"
+        install_version "$target" "upgrade"
+      fi
+      ;;
+    rollback)
+      [[ $# -ge 2 ]] || die "rollback requires a version, for example: ccnotify rollback v1.1.0"
+      install_version "$2" "rollback"
+      ;;
+    install)
+      [[ $# -ge 2 ]] || die "install requires a version, for example: ccnotify install v1.2.0"
+      install_version "$2" "install"
+      ;;
+    *)
+      die "unknown command: $cmd (run 'ccnotify help')"
+      ;;
+  esac
+}
+
+main "$@"

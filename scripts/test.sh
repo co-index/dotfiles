@@ -122,6 +122,32 @@ else
   failures=$((failures + 1))
 fi
 
+echo "== ccnotify offline checks =="
+check "bash -n bin/ccnotify" bash -n "$repo_dir/bin/ccnotify"
+check "ccnotify help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify" help
+check "ccnotify with no args shows help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify"
+check "ccnotify version" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify" version
+
+if env CLAUDE_CONFIG_DIR="$tmp_home/empty-claude" bash "$repo_dir/bin/ccnotify" version 2>/dev/null \
+  | grep -q "installed version: unknown"
+then
+  echo "ok: missing state reports unknown version"
+else
+  echo "FAIL: missing state reports unknown version"
+  failures=$((failures + 1))
+fi
+
+expect_fail "check fails fast with placeholder repo" \
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/bin/ccnotify" check
+expect_fail "upgrade fails fast with placeholder repo" \
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/bin/ccnotify" upgrade
+expect_fail "install requires a version" \
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/bin/ccnotify" install
+expect_fail "rollback requires a version" \
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" CCNOTIFY_GITHUB_REPO="OWNER/REPO" bash "$repo_dir/bin/ccnotify" rollback
+expect_fail "unknown command fails" \
+  env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/bin/ccnotify" frobnicate
+
 echo
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures check(s) failed."

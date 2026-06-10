@@ -217,6 +217,35 @@ else
   failures=$((failures + 1))
 fi
 
+echo "== starship module =="
+check "bash -n starship/install.sh" bash -n "$repo_dir/starship/install.sh"
+check "bash -n starship/export.sh" bash -n "$repo_dir/starship/export.sh"
+check "starship.toml exists and is non-empty" test -s "$repo_dir/starship/starship.toml"
+
+starship_home="$tmp_home/starship-home"
+mkdir -p "$starship_home"
+check "starship install runs" env HOME="$starship_home" bash "$repo_dir/starship/install.sh"
+check "starship.toml installed" test -f "$starship_home/.config/starship.toml"
+check "starship install reruns" env HOME="$starship_home" bash "$repo_dir/starship/install.sh"
+starship_backups="$(ls "$starship_home/.config"/starship.toml.bak.* 2>/dev/null | wc -l | tr -d ' ')"
+if [[ "$starship_backups" -ge 1 ]]; then
+  echo "ok: starship rerun creates backup"
+else
+  echo "FAIL: starship rerun creates backup"
+  failures=$((failures + 1))
+fi
+
+starship_export_home="$tmp_home/starship-export-home"
+mkdir -p "$starship_export_home/.config"
+printf '# exported test config\n' > "$starship_export_home/.config/starship.toml"
+starship_module_copy="$tmp_home/starship-module-copy"
+mkdir -p "$starship_module_copy"
+cp "$repo_dir/starship/export.sh" "$starship_module_copy/export.sh"
+check "starship export runs" env HOME="$starship_export_home" bash "$starship_module_copy/export.sh"
+check "starship export copied file" grep -q "exported test config" "$starship_module_copy/starship.toml"
+expect_fail "starship export fails without source" \
+  env HOME="$tmp_home/starship-missing-home" bash "$starship_module_copy/export.sh"
+
 echo
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures check(s) failed."

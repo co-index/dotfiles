@@ -310,6 +310,17 @@ check "vscode export copied keybindings" test -f "$vscode_module_copy/keybinding
 expect_fail "vscode export fails without source" \
   env HOME="$tmp_home/vscode-missing-home" PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
 
+echo "== install --all =="
+all_home="$tmp_home/all-home"
+mkdir -p "$all_home/.claude"
+check "install --all runs" \
+  env HOME="$all_home" CLAUDE_CONFIG_DIR="$all_home/.claude" PATH="/usr/bin:/bin" \
+  bash "$repo_dir/install.sh" --all
+check "all: claude hook installed" test -x "$all_home/.claude/hooks/notify-macos.sh"
+check "all: ccnotify installed" test -x "$all_home/.local/bin/ccnotify"
+check "all: vscode settings installed" test -f "$all_home/Library/Application Support/Code/User/settings.json"
+check "all: starship config installed" test -f "$all_home/.config/starship.toml"
+
 echo
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures check(s) failed."

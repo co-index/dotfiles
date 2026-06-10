@@ -100,8 +100,15 @@ def default_repo():
     try:
         with open(ccnotify_path, "r", encoding="utf-8") as fh:
             for line in fh:
-                if line.startswith("GITHUB_REPO="):
-                    return line.split(":-", 1)[1].split("}", 1)[0]
+                line = line.strip()
+                if not line.startswith("GITHUB_REPO="):
+                    continue
+                value = line[len("GITHUB_REPO="):].strip().strip('"').strip("'")
+                if ":-" in value:
+                    value = value.split(":-", 1)[1].split("}", 1)[0]
+                value = value.strip('"').strip("'")
+                if value and "/" in value and not value.startswith("$"):
+                    return value
     except Exception:
         pass
     return "OWNER/REPO"

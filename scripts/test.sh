@@ -171,8 +171,8 @@ else
   failures=$((failures + 1))
 fi
 
-if env CLAUDE_CONFIG_DIR="$test_claude_dir" "$tmp_home/.local/bin/ccnotify" version 2>/dev/null \
-  | grep -q "installed version: dev"
+installed_version_output="$(env CLAUDE_CONFIG_DIR="$test_claude_dir" "$tmp_home/.local/bin/ccnotify" version 2>/dev/null)"
+if grep -q "installed version: dev" <<<"$installed_version_output"
 then
   echo "ok: installed ccnotify reads recorded version"
 else

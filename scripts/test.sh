@@ -34,6 +34,18 @@ check "bash -n scripts/test.sh" bash -n "$repo_dir/scripts/test.sh"
 check "json: claude-settings.example.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/claude-settings.example.json"
 check "json: ccstatusline-settings.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/ccstatusline-settings.json"
 
+echo "== Top-level installer =="
+check "bash -n install.sh" bash -n "$repo_dir/install.sh"
+check "no args prints usage and exits 0" bash "$repo_dir/install.sh"
+usage_output="$(bash "$repo_dir/install.sh" 2>/dev/null || true)"
+if grep -q "Usage:" <<<"$usage_output" && grep -q "claude" <<<"$usage_output"; then
+  echo "ok: usage lists modules"
+else
+  echo "FAIL: usage lists modules"
+  failures=$((failures + 1))
+fi
+expect_fail "unknown module fails" bash "$repo_dir/install.sh" no-such-module
+
 echo "== Installer behavior (temporary HOME) =="
 tmp_home="$(mktemp -d)"
 trap 'rm -rf "$tmp_home"' EXIT
@@ -58,7 +70,7 @@ cat > "$test_claude_dir/settings.json" <<'JSON'
 }
 JSON
 
-check "install.sh runs" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/install.sh"
+check "install.sh runs" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh" claude
 check "notify hook installed" test -x "$test_claude_dir/hooks/notify-macos.sh"
 check "statusline wrapper installed" test -x "$test_claude_dir/ccstatusline-usage-api.sh"
 check "ccstatusline settings installed" test -f "$tmp_home/.config/ccstatusline/settings.json"
@@ -96,7 +108,7 @@ else
   failures=$((failures + 1))
 fi
 
-check "install.sh reruns" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/install.sh"
+check "install.sh reruns" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh" claude
 
 if env CLAUDE_DIR="$test_claude_dir" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
 import json

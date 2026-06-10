@@ -50,7 +50,16 @@ bash vscode/export.sh
 
 ### 恢复或卸载
 
-把对应的 `.bak.*` 备份复制回原文件名即可恢复。本模块不会删除任何插件。
+恢复：把对应的 `.bak.*` 备份复制回原文件名即可。
+
+卸载（删除本模块安装的配置文件）：
+
+```bash
+rm -f "$HOME/Library/Application Support/Code/User/settings.json"
+rm -f "$HOME/Library/Application Support/Code/User/keybindings.json"
+```
+
+本模块不会删除任何插件；不需要的插件请在 VS Code 中手动卸载。
 
 ### 排障
 
@@ -107,8 +116,17 @@ secrets (tokens, proxies, private hosts) before committing.
 
 ### Restore or Uninstall
 
-Copy the matching `.bak.*` file back over the original to restore. This
-module never uninstalls extensions.
+Restore: copy the matching `.bak.*` file back over the original.
+
+Uninstall (remove the files this module installed):
+
+```bash
+rm -f "$HOME/Library/Application Support/Code/User/settings.json"
+rm -f "$HOME/Library/Application Support/Code/User/keybindings.json"
+```
+
+This module never uninstalls extensions; remove unwanted ones manually in
+VS Code.
 
 ### Troubleshooting
 

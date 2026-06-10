@@ -43,7 +43,14 @@ bash starship/export.sh
 ### 恢复或卸载
 
 恢复：把 `.bak.*` 备份复制回 `~/.config/starship.toml`。
-卸载：删除该文件并从 `~/.zshrc` 移除 starship 初始化行。
+
+卸载：
+
+```bash
+rm -f ~/.config/starship.toml
+```
+
+然后从 `~/.zshrc` 移除 `eval "$(starship init zsh)"` 这一行。
 
 ### 排障
 
@@ -94,8 +101,14 @@ bash starship/export.sh
 ### Restore or Uninstall
 
 Restore: copy the `.bak.*` backup back to `~/.config/starship.toml`.
-Uninstall: delete that file and remove the starship init line from
-`~/.zshrc`.
+
+Uninstall:
+
+```bash
+rm -f ~/.config/starship.toml
+```
+
+Then remove the `eval "$(starship init zsh)"` line from `~/.zshrc`.
 
 ### Troubleshooting
 

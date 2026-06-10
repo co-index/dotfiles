@@ -13,6 +13,7 @@ multi-line status line powered by `ccstatusline`.
 - 使用 `ccstatusline` 显示紧凑的多行状态栏。
 - 在状态栏中补充项目名、worktree 名称和 Claude Max 计划标签。
 - 安装脚本会在覆盖已有文件前自动备份。
+- 提供 `ccnotify` 命令，按 GitHub Release 版本检查、升级和回滚本套配置。
 
 ### 安装内容
 
@@ -43,6 +44,7 @@ settings.json.bak.20260610-153000
 - macOS
 - Claude Code
 - `/usr/bin/python3`
+- curl（macOS 自带，`ccnotify` 联网操作需要）
 - Node.js 和 npm，因为状态栏包装脚本会运行 `npx -y ccstatusline@latest`
 
 ### 自动安装
@@ -119,7 +121,7 @@ Claude Code 配置示例：
 ### 更新与回滚
 
 安装脚本会把 `ccnotify` 命令安装到 `~/.local/bin/ccnotify`，用于按 GitHub
-Release 版本管理本套配置。所有安装操作都需要显式执行，`check` 只查询、
+Release 版本管理本套配置。所有安装操作都需要显式执行，`check` 只查询，
 永远不会自动安装：
 
 ```bash
@@ -207,6 +209,9 @@ rm -f ~/.claude/ccnotify-state.json
 - 状态栏没有显示：确认 `~/.claude/settings.json` 的 `statusLine.command` 指向可执行脚本。
 - 提示找不到 `npx`：安装 Node.js/npm，或确认它们在 Claude Code 启动环境的 `PATH` 中。
 - 配置 JSON 报错：恢复安装脚本生成的 `.bak.*` 备份，修复 JSON 后再重新安装。
+- 找不到 `ccnotify` 命令：确认 `~/.local/bin` 在 `PATH` 中，或重新运行 `./install.sh`。
+- `ccnotify check` 或 `upgrade` 失败：确认网络可以访问 GitHub，且 `bin/ccnotify`
+  中的 `GITHUB_REPO` 不再是 `OWNER/REPO` 占位符。
 
 ## English
 
@@ -216,6 +221,8 @@ rm -f ~/.claude/ccnotify-state.json
 - Shows a compact multi-line status line through `ccstatusline`.
 - Adds project, worktree, and Claude Max plan labels to the status line.
 - Backs up existing files before the installer overwrites them.
+- Ships a `ccnotify` command to check, upgrade, and roll back this setup by
+  GitHub release version.
 
 ### Installed Files
 
@@ -246,6 +253,7 @@ settings.json.bak.20260610-153000
 - macOS
 - Claude Code
 - `/usr/bin/python3`
+- curl (bundled with macOS; `ccnotify` needs it for network operations)
 - Node.js and npm, because the status line wrapper runs
   `npx -y ccstatusline@latest`
 
@@ -423,3 +431,7 @@ This repository keeps only reusable scripts and sanitized examples.
   available to Claude Code.
 - Invalid settings JSON: restore the `.bak.*` file created by the installer,
   fix the JSON, and rerun the installer.
+- `ccnotify` command not found: make sure `~/.local/bin` is on your `PATH`, or
+  rerun `./install.sh`.
+- `ccnotify check` or `upgrade` fails: make sure GitHub is reachable and
+  `GITHUB_REPO` in `bin/ccnotify` is no longer the `OWNER/REPO` placeholder.

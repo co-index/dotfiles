@@ -158,7 +158,7 @@ empty_green = "\033[38;5;22m"
 block = "█"
 
 def make_bar(percent):
-    total = 20
+    total = 40
     used = max(0, min(total, round(percent / 100 * total)))
     return green + block * used + empty_green + block * (total - used) + green
 

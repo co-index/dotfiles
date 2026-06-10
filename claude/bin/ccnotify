@@ -45,7 +45,7 @@ die() {
 
 require_repo() {
   if [[ "$GITHUB_REPO" == "$PLACEHOLDER_REPO" ]]; then
-    die "GITHUB_REPO is still the $PLACEHOLDER_REPO placeholder; edit bin/ccnotify (or set CCNOTIFY_GITHUB_REPO) before using network commands"
+    die "GITHUB_REPO is still the $PLACEHOLDER_REPO placeholder; edit claude/bin/ccnotify (or set CCNOTIFY_GITHUB_REPO) before using network commands"
   fi
 }
 

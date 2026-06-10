@@ -50,10 +50,31 @@ settings["statusLine"] = {
 }
 
 notify_command = os.path.join(claude_dir, "hooks", "notify-macos.sh")
-hook_entry = {"hooks": [{"type": "command", "command": notify_command}]}
-hooks = settings.setdefault("hooks", {})
+hooks = settings.get("hooks")
+if not isinstance(hooks, dict):
+    hooks = settings["hooks"] = {}
 for event in ("Notification", "Stop"):
-    hooks[event] = [hook_entry]
+    entries = hooks.get(event)
+    if not isinstance(entries, list):
+        entries = hooks[event] = []
+    found = False
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        entry_hooks = entry.get("hooks")
+        if not isinstance(entry_hooks, list):
+            continue
+        for hook in entry_hooks:
+            if (
+                isinstance(hook, dict)
+                and isinstance(hook.get("command"), str)
+                and hook["command"].endswith("/hooks/notify-macos.sh")
+            ):
+                hook["type"] = "command"
+                hook["command"] = notify_command
+                found = True
+    if not found:
+        entries.append({"hooks": [{"type": "command", "command": notify_command}]})
 
 with open(settings_path, "w", encoding="utf-8") as fh:
     json.dump(settings, fh, ensure_ascii=False, indent=2)

@@ -64,6 +64,64 @@ check "statusline wrapper installed" test -x "$test_claude_dir/ccstatusline-usag
 check "ccstatusline settings installed" test -f "$tmp_home/.config/ccstatusline/settings.json"
 check "settings.json is valid JSON" /usr/bin/python3 -m json.tool "$test_claude_dir/settings.json"
 
+if env CLAUDE_DIR="$test_claude_dir" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+import json
+import os
+
+claude_dir = os.environ["CLAUDE_DIR"]
+with open(os.path.join(claude_dir, "settings.json"), "r", encoding="utf-8") as fh:
+    settings = json.load(fh)
+
+assert settings.get("model") == "opus", "unrelated top-level key was lost"
+
+notification_commands = [
+    hook["command"]
+    for entry in settings["hooks"]["Notification"]
+    for hook in entry.get("hooks", [])
+]
+assert "/usr/local/bin/custom-notification-hook.sh" in notification_commands, "custom hook was removed"
+assert any(c.endswith("/hooks/notify-macos.sh") for c in notification_commands), "project Notification hook missing"
+
+stop_commands = [
+    hook["command"]
+    for entry in settings["hooks"]["Stop"]
+    for hook in entry.get("hooks", [])
+]
+assert any(c.endswith("/hooks/notify-macos.sh") for c in stop_commands), "project Stop hook missing"
+PY
+then
+  echo "ok: unrelated settings and hooks preserved"
+else
+  echo "FAIL: unrelated settings and hooks preserved"
+  failures=$((failures + 1))
+fi
+
+check "install.sh reruns" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh"
+
+if env CLAUDE_DIR="$test_claude_dir" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
+import json
+import os
+
+claude_dir = os.environ["CLAUDE_DIR"]
+with open(os.path.join(claude_dir, "settings.json"), "r", encoding="utf-8") as fh:
+    settings = json.load(fh)
+
+for event in ("Notification", "Stop"):
+    commands = [
+        hook["command"]
+        for entry in settings["hooks"][event]
+        for hook in entry.get("hooks", [])
+    ]
+    ours = [c for c in commands if c.endswith("/hooks/notify-macos.sh")]
+    assert len(ours) == 1, f"{event}: expected exactly one project hook, found {len(ours)}"
+PY
+then
+  echo "ok: rerun does not duplicate hooks"
+else
+  echo "FAIL: rerun does not duplicate hooks"
+  failures=$((failures + 1))
+fi
+
 echo
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures check(s) failed."

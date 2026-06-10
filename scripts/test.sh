@@ -26,6 +26,21 @@ expect_fail() {
   fi
 }
 
+jsonc_valid() {
+  /usr/bin/python3 - "$1" <<'PY'
+import json
+import re
+import sys
+
+path = sys.argv[1]
+with open(path, "r", encoding="utf-8") as fh:
+    text = fh.read()
+text = re.sub(r"^\s*//.*$", "", text, flags=re.M)
+text = re.sub(r",\s*([}\]])", r"\1", text)
+json.loads(text)
+PY
+}
+
 echo "== Syntax and config checks =="
 check "bash -n claude/install.sh" bash -n "$repo_dir/claude/install.sh"
 check "bash -n claude/scripts/notify-macos.sh" bash -n "$repo_dir/claude/scripts/notify-macos.sh"
@@ -245,6 +260,54 @@ check "starship export runs" env HOME="$starship_export_home" bash "$starship_mo
 check "starship export copied file" grep -q "exported test config" "$starship_module_copy/starship.toml"
 expect_fail "starship export fails without source" \
   env HOME="$tmp_home/starship-missing-home" bash "$starship_module_copy/export.sh"
+
+echo "== vscode module =="
+check "bash -n vscode/install.sh" bash -n "$repo_dir/vscode/install.sh"
+check "bash -n vscode/export.sh" bash -n "$repo_dir/vscode/export.sh"
+check "vscode settings.json is valid JSON(C)" jsonc_valid "$repo_dir/vscode/settings.json"
+check "vscode keybindings.json is valid JSON(C)" jsonc_valid "$repo_dir/vscode/keybindings.json"
+check "vscode extensions.txt exists" test -f "$repo_dir/vscode/extensions.txt"
+
+vscode_home="$tmp_home/vscode-home"
+mkdir -p "$vscode_home"
+vscode_user_dir="$vscode_home/Library/Application Support/Code/User"
+vscode_install_output="$(env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh" 2>&1)" \
+  && vscode_install_ok=1 || vscode_install_ok=0
+if [[ "$vscode_install_ok" -eq 1 ]]; then
+  echo "ok: vscode install runs without code CLI"
+else
+  echo "FAIL: vscode install runs without code CLI"
+  failures=$((failures + 1))
+fi
+if grep -q "skipped installing extensions" <<<"$vscode_install_output"; then
+  echo "ok: vscode install warns about missing code CLI"
+else
+  echo "FAIL: vscode install warns about missing code CLI"
+  failures=$((failures + 1))
+fi
+check "vscode settings installed" test -f "$vscode_user_dir/settings.json"
+check "vscode keybindings installed" test -f "$vscode_user_dir/keybindings.json"
+check "vscode install reruns" env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh"
+vscode_backups="$(find "$vscode_user_dir" -maxdepth 1 -name 'settings.json.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
+if [[ "$vscode_backups" -ge 1 ]]; then
+  echo "ok: vscode rerun creates backup"
+else
+  echo "FAIL: vscode rerun creates backup"
+  failures=$((failures + 1))
+fi
+
+vscode_export_home="$tmp_home/vscode-export-home"
+mkdir -p "$vscode_export_home/Library/Application Support/Code/User"
+printf '{"export": "test"}\n' > "$vscode_export_home/Library/Application Support/Code/User/settings.json"
+printf '[]\n' > "$vscode_export_home/Library/Application Support/Code/User/keybindings.json"
+vscode_module_copy="$tmp_home/vscode-module-copy"
+mkdir -p "$vscode_module_copy"
+cp "$repo_dir/vscode/export.sh" "$vscode_module_copy/export.sh"
+check "vscode export runs (no code CLI)" \
+  env HOME="$vscode_export_home" PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
+check "vscode export copied settings" grep -q '"export": "test"' "$vscode_module_copy/settings.json"
+expect_fail "vscode export fails without source" \
+  env HOME="$tmp_home/vscode-missing-home" PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
 
 echo
 if [[ "$failures" -gt 0 ]]; then

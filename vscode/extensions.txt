@@ -1,0 +1,1 @@
+# One extension id per line. Placeholder; replaced during seeding.

@@ -1,1 +1,11 @@
-[]
+[
+  {
+    "key": "cmd+escape",
+    "command": "claude-vscode.terminal.open"
+  },
+  {
+    "key": "cmd+escape",
+    "command": "workbench.action.createTerminalEditor",
+    "when": "terminalProcessSupported"
+  }
+]

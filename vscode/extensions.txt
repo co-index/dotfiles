@@ -1,1 +1,6 @@
-# One extension id per line. Placeholder; replaced during seeding.
+dracula-theme.theme-dracula
+eamodio.gitlens
+github.vscode-github-actions
+ms-ceintl.vscode-language-pack-zh-hans
+pkief.material-icon-theme
+techer.open-in-browser

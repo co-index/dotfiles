@@ -46,12 +46,14 @@ settings.json.bak.20260610-153000
 - Claude Code
 - `/usr/bin/python3`
 - curl（macOS 自带，`ccnotify` 联网操作需要）
-- Node.js 和 npm，因为状态栏包装脚本会运行 `npx -y ccstatusline@latest`
+- Node.js 和 npm，因为状态栏包装脚本会运行 `npx -y ccstatusline@2.2.19`
+  （版本已固定，避免每次渲染状态栏都联网解析 `@latest`；升级时改
+  `claude/scripts/ccstatusline-usage-api.sh` 中的版本号）
 
 ### 自动安装
 
 ```bash
-git clone https://github.com/OWNER/dotfiles.git
+git clone https://github.com/co-index/dotfiles.git
 cd dotfiles
 ./install.sh claude
 ```
@@ -257,12 +259,14 @@ settings.json.bak.20260610-153000
 - `/usr/bin/python3`
 - curl (bundled with macOS; `ccnotify` needs it for network operations)
 - Node.js and npm, because the status line wrapper runs
-  `npx -y ccstatusline@latest`
+  `npx -y ccstatusline@2.2.19` (the version is pinned so the status line never
+  resolves `@latest` over the network on every render; bump the version in
+  `claude/scripts/ccstatusline-usage-api.sh` to upgrade)
 
 ### Automatic Install
 
 ```bash
-git clone https://github.com/OWNER/dotfiles.git
+git clone https://github.com/co-index/dotfiles.git
 cd dotfiles
 ./install.sh claude
 ```

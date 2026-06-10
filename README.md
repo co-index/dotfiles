@@ -30,7 +30,7 @@ before overwriting them.
 ### 快速开始
 
 ```bash
-git clone https://github.com/OWNER/dotfiles.git
+git clone https://github.com/co-index/dotfiles.git
 cd dotfiles
 ./install.sh            # 查看用法和模块列表，不会安装任何东西
 ./install.sh claude     # 安装单个模块
@@ -94,7 +94,7 @@ module README's Prerequisites section before installing.
 ### Quick Start
 
 ```bash
-git clone https://github.com/OWNER/dotfiles.git
+git clone https://github.com/co-index/dotfiles.git
 cd dotfiles
 ./install.sh            # print usage and the module list; installs nothing
 ./install.sh claude     # install one module

@@ -10,13 +10,15 @@ version manager for Claude Code. / Claude Code 桌面通知、ccstatusline
 
 ### Features
 
-- Sends macOS notifications when Claude Code stops or needs attention.
-- Notifications go through the standalone open-source
-  [ccnotify](https://github.com/co-index/ccnotify) helper
-  (`brew install co-index/tap/ccnotify`): clicking a banner jumps back to
-  the app running Claude Code (VS Code / Warp / Terminal / iTerm2 and
-  friends, detected via `TERM_PROGRAM`). Without it, notifications fall
-  back to the native osascript style (not clickable).
+- Sends macOS notifications when Claude Code stops or needs attention,
+  through the [ccnotify plugin](https://github.com/co-index/claude-plugins)
+  — the installer registers it with Claude Code automatically, and all
+  notification logic lives in that one place.
+- With the standalone [ccnotify](https://github.com/co-index/ccnotify)
+  helper installed (`brew install co-index/tap/ccnotify`), clicking a
+  banner jumps back to the app running Claude Code (VS Code / Warp /
+  Terminal / iTerm2 and friends, detected via `TERM_PROGRAM`). Without it,
+  notifications fall back to the native osascript style (not clickable).
 - Shows a compact multi-line status line through `ccstatusline`.
 - Adds project, worktree, and Claude Max plan labels to the status line.
 - Backs up existing files before the installer overwrites them.
@@ -37,14 +39,14 @@ Notifications:
 The installer writes these files:
 
 ```text
-~/.claude/hooks/notify-macos.sh
 ~/.claude/ccstatusline-usage-api.sh
 ~/.config/ccstatusline/settings.json
 ~/.local/bin/ccdots
 ~/.claude/ccdots-state.json
 ```
 
-It also updates the Claude Code settings file:
+It registers the ccnotify notification plugin with Claude Code (marketplace
+`co-index/claude-plugins`) and updates the Claude Code settings file:
 
 ```text
 ~/.claude/settings.json
@@ -66,6 +68,8 @@ settings.json.bak.20260610-153000
   `npx -y ccstatusline@2.2.19` (the version is pinned so the status line never
   resolves `@latest` over the network on every render; bump the version in
   `claude/scripts/ccstatusline-usage-api.sh` to upgrade)
+- The `claude` CLI — used to register the notification plugin; without it
+  the installer prints the two `/plugin` commands to run inside Claude Code
 - Optional: [ccnotify](https://github.com/co-index/ccnotify)
   (`brew install co-index/tap/ccnotify`) for clickable notifications;
   without it notifications fall back to the native osascript style
@@ -90,19 +94,24 @@ CLAUDE_CONFIG_DIR="$HOME/.claude" ./install.sh claude
 ### Manual Install
 
 ```bash
-mkdir -p ~/.claude/hooks ~/.config/ccstatusline ~/.local/bin
-cp claude/scripts/notify-macos.sh ~/.claude/hooks/notify-macos.sh
+mkdir -p ~/.claude ~/.config/ccstatusline ~/.local/bin
 cp claude/scripts/ccstatusline-usage-api.sh ~/.claude/ccstatusline-usage-api.sh
 cp claude/config/ccstatusline-settings.json ~/.config/ccstatusline/settings.json
 cp claude/bin/ccdots ~/.local/bin/ccdots
-chmod +x ~/.claude/hooks/notify-macos.sh ~/.claude/ccstatusline-usage-api.sh \
-  ~/.local/bin/ccdots
+chmod +x ~/.claude/ccstatusline-usage-api.sh ~/.local/bin/ccdots
 ```
 
 Then merge `claude/config/claude-settings.example.json` into:
 
 ```text
 ~/.claude/settings.json
+```
+
+And install the notification plugin from inside Claude Code:
+
+```text
+/plugin marketplace add co-index/claude-plugins
+/plugin install ccnotify@co-index
 ```
 
 ### Configuration
@@ -115,34 +124,14 @@ Claude Code settings example:
     "type": "command",
     "command": "~/.claude/ccstatusline-usage-api.sh",
     "padding": 0
-  },
-  "hooks": {
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/notify-macos.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/notify-macos.sh"
-          }
-        ]
-      }
-    ]
   }
 }
 ```
 
-`Notification` means Claude needs attention. `Stop` means the current task has
-finished.
+Notification hooks do not appear in `settings.json`: they ship inside the
+ccnotify plugin, which Claude Code merges in at runtime. `Notification`
+(Claude needs attention) and `Stop` (the current task finished) are both
+covered by the plugin.
 
 ### Update and Rollback
 
@@ -172,8 +161,9 @@ export PATH="$HOME/.local/bin:$PATH"
 
 - Edit `claude/config/ccstatusline-settings.json` to change status line rows, colors,
   and usage display.
-- Edit `claude/scripts/notify-macos.sh` to change notification titles, body text,
-  sounds, and truncation length.
+- Notification titles, body text, and sounds live in the plugin: edit
+  `plugins/ccnotify/scripts/notify.sh` in
+  [co-index/claude-plugins](https://github.com/co-index/claude-plugins).
 - Edit `claude/scripts/ccstatusline-usage-api.sh` to change how project, worktree, and
   plan labels are displayed.
 - The app a clicked notification activates is detected via `TERM_PROGRAM`;
@@ -192,13 +182,6 @@ temporary-directory install test):
 
 ```bash
 bash scripts/test.sh
-```
-
-Test the macOS notification hook:
-
-```bash
-printf '{"hook_event_name":"Notification","cwd":"%s","message":"Test notification"}' "$PWD" \
-  | claude/scripts/notify-macos.sh
 ```
 
 Test the status line wrapper:
@@ -223,18 +206,23 @@ bash claude/uninstall.sh     # run the module script directly
 ```
 
 The script removes every file listed under Installed Files (backing each one
-up first) and strips the `statusLine`, `Notification`, and `Stop` settings
-this project added from `~/.claude/settings.json` — your own settings and
-hooks are left untouched.
+up first), uninstalls the ccnotify plugin and its marketplace through the
+plugin manager, and strips the `statusLine` setting (plus any legacy hook
+entries) from `~/.claude/settings.json` — your own settings and hooks are
+left untouched.
 
 Manual uninstall is also possible:
 
 ```bash
-rm -f ~/.claude/hooks/notify-macos.sh
 rm -f ~/.claude/ccstatusline-usage-api.sh
 rm -f ~/.config/ccstatusline/settings.json
 rm -f ~/.local/bin/ccdots
 rm -f ~/.claude/ccdots-state.json
+```
+
+```text
+/plugin uninstall ccnotify@co-index
+/plugin marketplace remove co-index
 ```
 
 Then remove the added settings from `~/.claude/settings.json`, or restore the
@@ -264,9 +252,10 @@ independent implementation whose design tips its hat to
 
 ### Troubleshooting
 
-- No notification appears: the notifier asks for permission the first time
-  it posts — allow "ccnotify" under System Settings -> Notifications, and
-  make sure Claude Code itself is allowed to send notifications.
+- No notification appears: check the plugin is installed (`/plugin` →
+  installed plugins should list `ccnotify@co-index`), and allow "ccnotify"
+  under System Settings -> Notifications — the notifier asks for permission
+  the first time it posts.
 - Notifications are not clickable: the ccnotify helper is missing — run
   `brew install co-index/tap/ccnotify`.
 - The status line does not appear: confirm that `statusLine.command` in
@@ -285,9 +274,11 @@ independent implementation whose design tips its hat to
 
 ### 功能
 
-- 当 Claude Code 停止运行或需要你关注时，发送 macOS 通知。
-- 通知通过独立开源的 [ccnotify](https://github.com/co-index/ccnotify)
-  发出（`brew install co-index/tap/ccnotify`）：点击横幅可跳回运行
+- 当 Claude Code 停止运行或需要你关注时，发送 macOS 通知。通知逻辑由
+  [ccnotify 插件](https://github.com/co-index/claude-plugins)提供——
+  安装脚本会自动把它注册到 Claude Code，所有通知逻辑只存在这一处。
+- 装上独立的 [ccnotify](https://github.com/co-index/ccnotify) 助手后
+  （`brew install co-index/tap/ccnotify`），点击横幅可跳回运行
   Claude Code 的应用（VS Code / Warp / Terminal / iTerm2 等，按
   `TERM_PROGRAM` 识别）。未安装时回退为 osascript 原生通知（不可点击）。
 - 使用 `ccstatusline` 显示紧凑的多行状态栏。
@@ -308,14 +299,14 @@ independent implementation whose design tips its hat to
 安装脚本会写入以下文件：
 
 ```text
-~/.claude/hooks/notify-macos.sh
 ~/.claude/ccstatusline-usage-api.sh
 ~/.config/ccstatusline/settings.json
 ~/.local/bin/ccdots
 ~/.claude/ccdots-state.json
 ```
 
-并把以下配置合并到 Claude Code 设置文件：
+同时把 ccnotify 通知插件注册到 Claude Code（marketplace 为
+`co-index/claude-plugins`），并把以下配置合并到 Claude Code 设置文件：
 
 ```text
 ~/.claude/settings.json
@@ -336,6 +327,8 @@ settings.json.bak.20260610-153000
 - Node.js 和 npm，因为状态栏包装脚本会运行 `npx -y ccstatusline@2.2.19`
   （版本已固定，避免每次渲染状态栏都联网解析 `@latest`；升级时改
   `claude/scripts/ccstatusline-usage-api.sh` 中的版本号）
+- `claude` CLI——用于自动注册通知插件；缺少时安装脚本会打印两条
+  `/plugin` 命令让你在 Claude Code 里手动执行
 - 可选：[ccnotify](https://github.com/co-index/ccnotify)
   （`brew install co-index/tap/ccnotify`）——可点击通知；缺少时通知回退为
   osascript 原生样式（不可点击）
@@ -359,19 +352,24 @@ CLAUDE_CONFIG_DIR="$HOME/.claude" ./install.sh claude
 ### 手动安装
 
 ```bash
-mkdir -p ~/.claude/hooks ~/.config/ccstatusline ~/.local/bin
-cp claude/scripts/notify-macos.sh ~/.claude/hooks/notify-macos.sh
+mkdir -p ~/.claude ~/.config/ccstatusline ~/.local/bin
 cp claude/scripts/ccstatusline-usage-api.sh ~/.claude/ccstatusline-usage-api.sh
 cp claude/config/ccstatusline-settings.json ~/.config/ccstatusline/settings.json
 cp claude/bin/ccdots ~/.local/bin/ccdots
-chmod +x ~/.claude/hooks/notify-macos.sh ~/.claude/ccstatusline-usage-api.sh \
-  ~/.local/bin/ccdots
+chmod +x ~/.claude/ccstatusline-usage-api.sh ~/.local/bin/ccdots
 ```
 
 然后把 `claude/config/claude-settings.example.json` 中的内容合并到：
 
 ```text
 ~/.claude/settings.json
+```
+
+再在 Claude Code 里安装通知插件：
+
+```text
+/plugin marketplace add co-index/claude-plugins
+/plugin install ccnotify@co-index
 ```
 
 ### 配置说明
@@ -384,33 +382,13 @@ Claude Code 配置示例：
     "type": "command",
     "command": "~/.claude/ccstatusline-usage-api.sh",
     "padding": 0
-  },
-  "hooks": {
-    "Notification": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/notify-macos.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.claude/hooks/notify-macos.sh"
-          }
-        ]
-      }
-    ]
   }
 }
 ```
 
-`Notification` 事件会提示 Claude 需要你关注，`Stop` 事件会提示当前任务已结束。
+通知 hook 不会出现在 `settings.json` 里：它们随 ccnotify 插件分发，由
+Claude Code 在运行时合并。`Notification`（Claude 需要你关注）和
+`Stop`（当前任务结束）两个事件都由插件覆盖。
 
 ### 更新与回滚
 
@@ -438,7 +416,9 @@ export PATH="$HOME/.local/bin:$PATH"
 ### 自定义
 
 - 修改 `claude/config/ccstatusline-settings.json` 可调整状态栏行、颜色和用量展示。
-- 修改 `claude/scripts/notify-macos.sh` 可调整通知标题、正文、声音和内容截断长度。
+- 通知标题、正文和声音在插件里：修改
+  [co-index/claude-plugins](https://github.com/co-index/claude-plugins)
+  的 `plugins/ccnotify/scripts/notify.sh`。
 - 修改 `claude/scripts/ccstatusline-usage-api.sh` 可调整项目名、worktree 和计划标签的展示逻辑。
 - 通知点击跳转的应用按 `TERM_PROGRAM` 自动识别，未覆盖的终端可设
   `CCNOTIFY_ACTIVATE_BUNDLE_ID` 指定 bundle id。
@@ -454,13 +434,6 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ```bash
 bash scripts/test.sh
-```
-
-测试 macOS 通知脚本：
-
-```bash
-printf '{"hook_event_name":"Notification","cwd":"%s","message":"Test notification"}' "$PWD" \
-  | claude/scripts/notify-macos.sh
 ```
 
 测试状态栏脚本：
@@ -483,18 +456,23 @@ printf '{"cwd":"%s"}' "$PWD" | claude/scripts/ccstatusline-usage-api.sh
 bash claude/uninstall.sh     # 直接运行模块脚本
 ```
 
-脚本会删除上面"安装内容"列出的全部文件（删除前先备份），并从
-`~/.claude/settings.json` 中移除本项目添加的 `statusLine`、`Notification`
-和 `Stop` 配置——你自己添加的设置和 hooks 会原样保留。
+脚本会删除上面"安装内容"列出的全部文件（删除前先备份），通过插件管理
+器卸载 ccnotify 插件及其 marketplace，并从 `~/.claude/settings.json`
+中移除本项目添加的 `statusLine` 配置（以及旧版本写入的 hook 条目）——
+你自己添加的设置和 hooks 会原样保留。
 
 也可以手动卸载：
 
 ```bash
-rm -f ~/.claude/hooks/notify-macos.sh
 rm -f ~/.claude/ccstatusline-usage-api.sh
 rm -f ~/.config/ccstatusline/settings.json
 rm -f ~/.local/bin/ccdots
 rm -f ~/.claude/ccdots-state.json
+```
+
+```text
+/plugin uninstall ccnotify@co-index
+/plugin marketplace remove co-index
 ```
 
 然后从 `~/.claude/settings.json` 中移除本项目添加的配置，或恢复安装前
@@ -522,9 +500,10 @@ rm -f ~/.claude/ccdots-state.json
 
 ### 排障
 
-- 没有通知：通知器第一次发通知时会请求权限，去 系统设置 → 通知 里允许
-  "ccnotify"；同时确认 Claude Code 本身允许发送通知。
-- 通知不可点击：说明 ccnotify 未安装，运行
+- 没有通知：先确认插件已安装（`/plugin` 的已安装列表里应有
+  `ccnotify@co-index`），再去 系统设置 → 通知 里允许 "ccnotify"——
+  通知器第一次发通知时会请求权限。
+- 通知不可点击：说明 ccnotify 助手未安装，运行
   `brew install co-index/tap/ccnotify`。
 - 状态栏没有显示：确认 `~/.claude/settings.json` 的 `statusLine.command` 指向可执行脚本。
 - 提示找不到 `npx`：安装 Node.js/npm，或确认它们在 Claude Code 启动环境的 `PATH` 中。

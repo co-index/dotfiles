@@ -15,6 +15,20 @@ remove_file() {
   fi
 }
 
+# The notification plugin is registered with Claude Code, not copied into
+# place, so it is removed through the plugin manager. CCDOTS_SKIP_PLUGIN=1
+# skips this (the test suite sets it).
+if [[ "${CCDOTS_SKIP_PLUGIN:-}" != "1" ]] && command -v claude >/dev/null 2>&1; then
+  if claude plugin list 2>/dev/null | grep -q "ccnotify@co-index"; then
+    claude plugin uninstall ccnotify@co-index \
+      || echo "Warning: could not uninstall the ccnotify plugin."
+  fi
+  if claude plugin marketplace list 2>/dev/null | grep -q " co-index$"; then
+    claude plugin marketplace remove co-index \
+      || echo "Warning: could not remove the co-index marketplace."
+  fi
+fi
+
 # Leftover from older installs that compiled a notifier app; no backup needed.
 if [[ -d "$claude_dir/ClaudeNotifier.app" ]]; then
   rm -rf "$claude_dir/ClaudeNotifier.app"

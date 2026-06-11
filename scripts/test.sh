@@ -3,6 +3,9 @@ set -euo pipefail
 
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 failures=0
+# Plugin registration needs the network and the claude CLI; the offline
+# suite verifies everything around it.
+export CCDOTS_SKIP_PLUGIN=1
 
 check() {
   local name="$1"
@@ -44,7 +47,6 @@ PY
 
 echo "== Syntax and config checks =="
 check "bash -n claude/install.sh" bash -n "$repo_dir/claude/install.sh"
-check "bash -n claude/scripts/notify-macos.sh" bash -n "$repo_dir/claude/scripts/notify-macos.sh"
 check "bash -n claude/scripts/ccstatusline-usage-api.sh" bash -n "$repo_dir/claude/scripts/ccstatusline-usage-api.sh"
 check "bash -n scripts/test.sh" bash -n "$repo_dir/scripts/test.sh"
 check "json: claude-settings.example.json" /usr/bin/python3 -m json.tool "$repo_dir/claude/config/claude-settings.example.json"
@@ -78,7 +80,12 @@ trap 'rm -rf "$tmp_home"' EXIT
 test_claude_dir="$tmp_home/.claude"
 mkdir -p "$test_claude_dir"
 
-cat > "$test_claude_dir/settings.json" <<'JSON'
+# Seed the old layout: our notify hook file plus settings entries written by
+# earlier installer versions, alongside a hook the user added themselves.
+mkdir -p "$test_claude_dir/hooks"
+printf '#!/bin/bash\ntrue\n' > "$test_claude_dir/hooks/notify-macos.sh"
+chmod +x "$test_claude_dir/hooks/notify-macos.sh"
+cat > "$test_claude_dir/settings.json" <<JSON
 {
   "model": "opus",
   "hooks": {
@@ -88,6 +95,20 @@ cat > "$test_claude_dir/settings.json" <<'JSON'
           {
             "type": "command",
             "command": "/usr/local/bin/custom-notification-hook.sh"
+          },
+          {
+            "type": "command",
+            "command": "$test_claude_dir/hooks/notify-macos.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$test_claude_dir/hooks/notify-macos.sh"
           }
         ]
       }
@@ -97,7 +118,7 @@ cat > "$test_claude_dir/settings.json" <<'JSON'
 JSON
 
 check "install.sh runs" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh" claude
-check "notify hook installed" test -x "$test_claude_dir/hooks/notify-macos.sh"
+check "old notify hook file removed" test ! -e "$test_claude_dir/hooks/notify-macos.sh"
 check "statusline wrapper installed" test -x "$test_claude_dir/ccstatusline-usage-api.sh"
 check "ccstatusline settings installed" test -f "$tmp_home/.config/ccstatusline/settings.json"
 check "settings.json is valid JSON" /usr/bin/python3 -m json.tool "$test_claude_dir/settings.json"
@@ -111,59 +132,35 @@ with open(os.path.join(claude_dir, "settings.json"), "r", encoding="utf-8") as f
     settings = json.load(fh)
 
 assert settings.get("model") == "opus", "unrelated top-level key was lost"
+assert settings.get("statusLine", {}).get("command", "").endswith(
+    "/ccstatusline-usage-api.sh"
+), "statusLine missing"
 
+hooks = settings.get("hooks", {})
 notification_commands = [
     hook["command"]
-    for entry in settings["hooks"]["Notification"]
+    for entry in hooks.get("Notification", [])
     for hook in entry.get("hooks", [])
 ]
 assert "/usr/local/bin/custom-notification-hook.sh" in notification_commands, "custom hook was removed"
-assert any(c.endswith("/hooks/notify-macos.sh") for c in notification_commands), "project Notification hook missing"
-
-stop_commands = [
-    hook["command"]
-    for entry in settings["hooks"]["Stop"]
-    for hook in entry.get("hooks", [])
-]
-assert any(c.endswith("/hooks/notify-macos.sh") for c in stop_commands), "project Stop hook missing"
+assert not any(
+    c.endswith("/hooks/notify-macos.sh") for c in notification_commands
+), "old project Notification hook should be stripped (plugin owns notifications)"
+assert "Stop" not in hooks, "project-only Stop event should be gone"
 PY
 then
-  echo "ok: unrelated settings and hooks preserved"
+  echo "ok: install strips our old hooks and keeps the user's"
 else
-  echo "FAIL: unrelated settings and hooks preserved"
+  echo "FAIL: install strips our old hooks and keeps the user's"
   failures=$((failures + 1))
 fi
 
 check "install.sh reruns" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh" claude
-claude_hook_backups="$(find "$test_claude_dir/hooks" -maxdepth 1 -name 'notify-macos.sh.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
-if [[ "$claude_hook_backups" -eq 0 ]]; then
-  echo "ok: unchanged claude rerun skips hook backup"
+wrapper_backups="$(find "$test_claude_dir" -maxdepth 1 -name 'ccstatusline-usage-api.sh.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
+if [[ "$wrapper_backups" -eq 0 ]]; then
+  echo "ok: unchanged claude rerun skips wrapper backup"
 else
-  echo "FAIL: unchanged claude rerun skips hook backup"
-  failures=$((failures + 1))
-fi
-
-if env CLAUDE_DIR="$test_claude_dir" /usr/bin/python3 - <<'PY' >/dev/null 2>&1
-import json
-import os
-
-claude_dir = os.environ["CLAUDE_DIR"]
-with open(os.path.join(claude_dir, "settings.json"), "r", encoding="utf-8") as fh:
-    settings = json.load(fh)
-
-for event in ("Notification", "Stop"):
-    commands = [
-        hook["command"]
-        for entry in settings["hooks"][event]
-        for hook in entry.get("hooks", [])
-    ]
-    ours = [c for c in commands if c.endswith("/hooks/notify-macos.sh")]
-    assert len(ours) == 1, f"{event}: expected exactly one project hook, found {len(ours)}"
-PY
-then
-  echo "ok: rerun does not duplicate hooks"
-else
-  echo "FAIL: rerun does not duplicate hooks"
+  echo "FAIL: unchanged claude rerun skips wrapper backup"
   failures=$((failures + 1))
 fi
 
@@ -271,7 +268,8 @@ else
 fi
 
 echo "== claude uninstall =="
-mkdir -p "$test_claude_dir/ClaudeNotifier.app/Contents"
+mkdir -p "$test_claude_dir/ClaudeNotifier.app/Contents" "$test_claude_dir/hooks"
+printf '#!/bin/bash\ntrue\n' > "$test_claude_dir/hooks/notify-macos.sh"
 check "claude uninstall runs" \
   env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/uninstall.sh" claude
 check "uninstall removed notify hook" test ! -e "$test_claude_dir/hooks/notify-macos.sh"
@@ -467,7 +465,7 @@ mkdir -p "$all_home/.claude"
 check "install --all runs" \
   env HOME="$all_home" CLAUDE_CONFIG_DIR="$all_home/.claude" PATH="/usr/bin:/bin" \
   bash "$repo_dir/install.sh" --all
-check "all: claude hook installed" test -x "$all_home/.claude/hooks/notify-macos.sh"
+check "all: statusline wrapper installed" test -x "$all_home/.claude/ccstatusline-usage-api.sh"
 check "all: ccdots installed" test -x "$all_home/.local/bin/ccdots"
 check "all: vscode settings installed" test -f "$all_home/Library/Application Support/Code/User/settings.json"
 check "all: starship config installed" test -f "$all_home/.config/starship.toml"
@@ -476,7 +474,7 @@ echo "== uninstall --all =="
 check "uninstall --all runs" \
   env HOME="$all_home" CLAUDE_CONFIG_DIR="$all_home/.claude" PATH="/usr/bin:/bin" \
   bash "$repo_dir/uninstall.sh" --all
-check "all: claude hook removed" test ! -e "$all_home/.claude/hooks/notify-macos.sh"
+check "all: statusline wrapper removed" test ! -e "$all_home/.claude/ccstatusline-usage-api.sh"
 check "all: ccdots removed" test ! -e "$all_home/.local/bin/ccdots"
 check "all: vscode settings removed" test ! -e "$all_home/Library/Application Support/Code/User/settings.json"
 check "all: starship config removed" test ! -e "$all_home/.config/starship.toml"

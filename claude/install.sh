@@ -4,10 +4,10 @@ set -euo pipefail
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 settings_path="$claude_dir/settings.json"
-hooks_dir="$claude_dir/hooks"
 statusline_dir="$HOME/.config/ccstatusline"
 bin_dir="$HOME/.local/bin"
 state_path="$claude_dir/ccdots-state.json"
+plugin_marketplace="co-index/claude-plugins"
 
 # Skips the backup when the existing file already matches the replacement,
 # so reruns do not pile up identical .bak.* files. settings.json is merged in
@@ -22,24 +22,29 @@ backup_file() {
   cp "$path" "$path.bak.$(date +%Y%m%d-%H%M%S)"
 }
 
-mkdir -p "$hooks_dir" "$statusline_dir" "$bin_dir"
+mkdir -p "$claude_dir" "$statusline_dir" "$bin_dir"
 
-backup_file "$hooks_dir/notify-macos.sh" "$repo_dir/scripts/notify-macos.sh"
 backup_file "$claude_dir/ccstatusline-usage-api.sh" "$repo_dir/scripts/ccstatusline-usage-api.sh"
 backup_file "$statusline_dir/settings.json" "$repo_dir/config/ccstatusline-settings.json"
 backup_file "$settings_path"
 backup_file "$bin_dir/ccdots" "$repo_dir/bin/ccdots"
 
-cp "$repo_dir/scripts/notify-macos.sh" "$hooks_dir/notify-macos.sh"
 cp "$repo_dir/scripts/ccstatusline-usage-api.sh" "$claude_dir/ccstatusline-usage-api.sh"
 cp "$repo_dir/config/ccstatusline-settings.json" "$statusline_dir/settings.json"
 cp "$repo_dir/bin/ccdots" "$bin_dir/ccdots"
-chmod +x "$hooks_dir/notify-macos.sh" "$claude_dir/ccstatusline-usage-api.sh" "$bin_dir/ccdots"
+chmod +x "$claude_dir/ccstatusline-usage-api.sh" "$bin_dir/ccdots"
 
 # Migration from earlier layouts: the version manager used to be installed
 # as ~/.local/bin/ccnotify (the name now belongs to the standalone notifier,
-# https://github.com/co-index/ccnotify), and notifications used to come from
-# a ClaudeNotifier.app compiled into the Claude config dir.
+# https://github.com/co-index/ccnotify), notifications used to come from
+# a ClaudeNotifier.app compiled into the Claude config dir, and the notify
+# hook used to live in settings.json instead of the ccnotify plugin.
+old_hook="$claude_dir/hooks/notify-macos.sh"
+if [[ -f "$old_hook" ]]; then
+  cp "$old_hook" "$old_hook.bak.$(date +%Y%m%d-%H%M%S)"
+  rm -f "$old_hook"
+  echo "Removed the old notify hook (notifications now come from the ccnotify plugin)."
+fi
 if [[ -f "$bin_dir/ccnotify" ]] && head -c 4096 "$bin_dir/ccnotify" | grep -q "version manager for Claude Code"; then
   rm -f "$bin_dir/ccnotify"
   echo "Removed the old $bin_dir/ccnotify (the version manager is now ccdots)."
@@ -76,32 +81,37 @@ settings["statusLine"] = {
     "padding": 0,
 }
 
-notify_command = os.path.join(claude_dir, "hooks", "notify-macos.sh")
+
+# Notifications now come from the ccnotify plugin; strip the notify hook
+# entries that earlier versions of this installer wrote into settings.json,
+# keeping any hooks the user added themselves.
+def is_project_hook(hook):
+    return (
+        isinstance(hook, dict)
+        and isinstance(hook.get("command"), str)
+        and hook["command"].endswith("/hooks/notify-macos.sh")
+    )
+
+
 hooks = settings.get("hooks")
-if not isinstance(hooks, dict):
-    hooks = settings["hooks"] = {}
-for event in ("Notification", "Stop"):
-    entries = hooks.get(event)
-    if not isinstance(entries, list):
-        entries = hooks[event] = []
-    found = False
-    for entry in entries:
-        if not isinstance(entry, dict):
+if isinstance(hooks, dict):
+    for event in ("Notification", "Stop"):
+        entries = hooks.get(event)
+        if not isinstance(entries, list):
             continue
-        entry_hooks = entry.get("hooks")
-        if not isinstance(entry_hooks, list):
-            continue
-        for hook in entry_hooks:
-            if (
-                isinstance(hook, dict)
-                and isinstance(hook.get("command"), str)
-                and hook["command"].endswith("/hooks/notify-macos.sh")
-            ):
-                hook["type"] = "command"
-                hook["command"] = notify_command
-                found = True
-    if not found:
-        entries.append({"hooks": [{"type": "command", "command": notify_command}]})
+        kept = []
+        for entry in entries:
+            if isinstance(entry, dict) and isinstance(entry.get("hooks"), list):
+                entry["hooks"] = [h for h in entry["hooks"] if not is_project_hook(h)]
+                if not entry["hooks"]:
+                    continue
+            kept.append(entry)
+        if kept:
+            hooks[event] = kept
+        else:
+            hooks.pop(event, None)
+    if not hooks:
+        settings.pop("hooks", None)
 
 with open(settings_path, "w", encoding="utf-8") as fh:
     json.dump(settings, fh, ensure_ascii=False, indent=2)
@@ -157,6 +167,26 @@ with open(state_path, "w", encoding="utf-8") as fh:
     json.dump(state, fh, ensure_ascii=False, indent=2)
     fh.write("\n")
 PY
+
+# Notifications are provided by the ccnotify Claude Code plugin (single
+# source: https://github.com/co-index/claude-plugins). CCDOTS_SKIP_PLUGIN=1
+# skips the network-dependent plugin setup (the test suite sets it).
+if [[ "${CCDOTS_SKIP_PLUGIN:-}" != "1" ]]; then
+  if command -v claude >/dev/null 2>&1; then
+    if ! claude plugin marketplace list 2>/dev/null | grep -q " co-index$"; then
+      claude plugin marketplace add "$plugin_marketplace" \
+        || echo "Warning: could not add the co-index plugin marketplace."
+    fi
+    if ! claude plugin list 2>/dev/null | grep -q "ccnotify@co-index"; then
+      claude plugin install ccnotify@co-index \
+        || echo "Warning: could not install the ccnotify plugin."
+    fi
+  else
+    echo "Note: claude CLI not found; install the notification plugin from Claude Code:"
+    echo "  /plugin marketplace add $plugin_marketplace"
+    echo "  /plugin install ccnotify@co-index"
+  fi
+fi
 
 case ":$PATH:" in
   *":$bin_dir:"*) ;;

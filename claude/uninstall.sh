@@ -23,7 +23,9 @@ if [[ "${CCDOTS_SKIP_PLUGIN:-}" != "1" ]] && command -v claude >/dev/null 2>&1; 
     claude plugin uninstall ccnotify@co-index \
       || echo "Warning: could not uninstall the ccnotify plugin."
   fi
-  if claude plugin marketplace list 2>/dev/null | grep -q " co-index$"; then
+  # Only drop the marketplace when no other plugin still comes from it.
+  if claude plugin marketplace list 2>/dev/null | grep -q " co-index$" \
+    && ! claude plugin list 2>/dev/null | grep "@co-index" | grep -qv "ccnotify@co-index"; then
     claude plugin marketplace remove co-index \
       || echo "Warning: could not remove the co-index marketplace."
   fi

@@ -164,6 +164,16 @@ else
   failures=$((failures + 1))
 fi
 
+settings_backups_before="$(find "$test_claude_dir" -maxdepth 1 -name 'settings.json.bak.*' | wc -l | tr -d ' ')"
+check "install.sh reruns again" env HOME="$tmp_home" CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/install.sh" claude
+settings_backups_after="$(find "$test_claude_dir" -maxdepth 1 -name 'settings.json.bak.*' | wc -l | tr -d ' ')"
+if [[ "$settings_backups_after" -eq "$settings_backups_before" ]]; then
+  echo "ok: unchanged rerun adds no settings backup"
+else
+  echo "FAIL: unchanged rerun adds no settings backup"
+  failures=$((failures + 1))
+fi
+
 echo "== ccdots offline checks =="
 check "bash -n claude/bin/ccdots" bash -n "$repo_dir/claude/bin/ccdots"
 check "ccdots help" env CLAUDE_CONFIG_DIR="$test_claude_dir" bash "$repo_dir/claude/bin/ccdots" help
@@ -264,6 +274,65 @@ if grep -q '"repo": "example/old"' "$migrate_claude_dir/ccdots-state.json"; then
   echo "ok: migration carried the old state over"
 else
   echo "FAIL: migration carried the old state over"
+  failures=$((failures + 1))
+fi
+
+# An unrelated tool that happens to be called ccnotify (e.g. the brew
+# notifier shim) must survive both install and uninstall untouched.
+printf '#!/bin/bash\nexec "/opt/homebrew/libexec/ccnotify.app/Contents/MacOS/ccnotify" "$@"\n' \
+  > "$migrate_home/.local/bin/ccnotify"
+chmod +x "$migrate_home/.local/bin/ccnotify"
+check "install with an unrelated ccnotify present" \
+  env HOME="$migrate_home" CLAUDE_CONFIG_DIR="$migrate_claude_dir" bash "$repo_dir/claude/install.sh"
+check "install leaves the unrelated ccnotify alone" test -x "$migrate_home/.local/bin/ccnotify"
+check "uninstall with an unrelated ccnotify present" \
+  env HOME="$migrate_home" CLAUDE_CONFIG_DIR="$migrate_claude_dir" bash "$repo_dir/uninstall.sh" claude
+check "uninstall leaves the unrelated ccnotify alone" test -x "$migrate_home/.local/bin/ccnotify"
+
+echo "== Plugin-not-ready safety =="
+# Without the claude CLI (and without the skip override) the installer must
+# keep the legacy hook and its settings entries so notifications stay alive.
+notready_home="$tmp_home/notready-home"
+notready_claude_dir="$notready_home/.claude"
+mkdir -p "$notready_claude_dir/hooks"
+printf '#!/bin/bash\ntrue\n' > "$notready_claude_dir/hooks/notify-macos.sh"
+chmod +x "$notready_claude_dir/hooks/notify-macos.sh"
+cat > "$notready_claude_dir/settings.json" <<JSON
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$notready_claude_dir/hooks/notify-macos.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+JSON
+notready_output="$(env HOME="$notready_home" CLAUDE_CONFIG_DIR="$notready_claude_dir" \
+  CCDOTS_SKIP_PLUGIN= PATH="/usr/bin:/bin" bash "$repo_dir/claude/install.sh" 2>&1)" \
+  && notready_ok=1 || notready_ok=0
+if [[ "$notready_ok" -eq 1 ]]; then
+  echo "ok: install runs without the claude CLI"
+else
+  echo "FAIL: install runs without the claude CLI"
+  failures=$((failures + 1))
+fi
+if grep -q "Keeping the existing notify hook" <<<"$notready_output"; then
+  echo "ok: install reports the kept hook"
+else
+  echo "FAIL: install reports the kept hook"
+  failures=$((failures + 1))
+fi
+check "legacy hook kept while plugin missing" test -x "$notready_claude_dir/hooks/notify-macos.sh"
+if grep -q "notify-macos.sh" "$notready_claude_dir/settings.json"; then
+  echo "ok: legacy hook entries kept while plugin missing"
+else
+  echo "FAIL: legacy hook entries kept while plugin missing"
   failures=$((failures + 1))
 fi
 

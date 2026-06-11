@@ -7,5 +7,5 @@ github.vscode-github-actions
 ms-ceintl.vscode-language-pack-zh-hans
 pkief.material-icon-theme
 techer.open-in-browser
-typescript.native-preview
+typescriptteam.native-preview
 usernamehw.errorlens

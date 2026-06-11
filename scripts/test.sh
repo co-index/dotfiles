@@ -455,7 +455,7 @@ check "vscode extensions.txt exists" test -f "$repo_dir/vscode/extensions.txt"
 vscode_home="$tmp_home/vscode-home"
 mkdir -p "$vscode_home"
 vscode_user_dir="$vscode_home/Library/Application Support/Code/User"
-vscode_install_output="$(env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh" 2>&1)" \
+vscode_install_output="$(env HOME="$vscode_home" DOTFILES_CODE_BIN= PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh" 2>&1)" \
   && vscode_install_ok=1 || vscode_install_ok=0
 if [[ "$vscode_install_ok" -eq 1 ]]; then
   echo "ok: vscode install runs without code CLI"
@@ -471,7 +471,7 @@ else
 fi
 check "vscode settings installed" test -f "$vscode_user_dir/settings.json"
 check "vscode keybindings installed" test -f "$vscode_user_dir/keybindings.json"
-check "vscode install reruns" env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh"
+check "vscode install reruns" env HOME="$vscode_home" DOTFILES_CODE_BIN= PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh"
 vscode_backups="$(find "$vscode_user_dir" -maxdepth 1 -name 'settings.json.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$vscode_backups" -eq 0 ]]; then
   echo "ok: unchanged vscode rerun skips backup"
@@ -480,7 +480,7 @@ else
   failures=$((failures + 1))
 fi
 printf '\n// local tweak\n' >> "$vscode_user_dir/settings.json"
-check "vscode install over modified file" env HOME="$vscode_home" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh"
+check "vscode install over modified file" env HOME="$vscode_home" DOTFILES_CODE_BIN= PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh"
 vscode_backups="$(find "$vscode_user_dir" -maxdepth 1 -name 'settings.json.bak.*' 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$vscode_backups" -ge 1 ]]; then
   echo "ok: modified vscode file is backed up"
@@ -500,12 +500,45 @@ fi
 exit 0
 SH
 chmod +x "$fake_code_dir/code"
-vscode_fail_output="$(env HOME="$vscode_home" PATH="$fake_code_dir:/usr/bin:/bin" bash "$repo_dir/vscode/install.sh" 2>&1)" \
+vscode_fail_output="$(env HOME="$vscode_home" DOTFILES_CODE_BIN="$fake_code_dir/code" PATH="/usr/bin:/bin" bash "$repo_dir/vscode/install.sh" 2>&1)" \
   && vscode_fail_ok=1 || vscode_fail_ok=0
 if [[ "$vscode_fail_ok" -eq 1 ]] && grep -q "simulated marketplace failure" <<<"$vscode_fail_output"; then
   echo "ok: failed extension install surfaces the code CLI error"
 else
   echo "FAIL: failed extension install surfaces the code CLI error"
+  failures=$((failures + 1))
+fi
+
+# A `code` shim that resolves into Cursor.app must not receive our extensions.
+cursor_app_dir="$tmp_home/Cursor.app/Contents/Resources/app/bin"
+mkdir -p "$cursor_app_dir"
+printf '#!/bin/bash\necho "should never run" >> "%s/cursor-invoked"\n' "$tmp_home" > "$cursor_app_dir/code"
+chmod +x "$cursor_app_dir/code"
+cursor_shim_dir="$tmp_home/cursor-shim-bin"
+mkdir -p "$cursor_shim_dir"
+ln -sf "$cursor_app_dir/code" "$cursor_shim_dir/code"
+vscode_cursor_output="$(env HOME="$vscode_home" DOTFILES_VSCODE_BUNDLE_CLI="$tmp_home/no-such-vscode" \
+  PATH="$cursor_shim_dir:/usr/bin:/bin" bash "$repo_dir/vscode/install.sh" 2>&1)" \
+  && vscode_cursor_ok=1 || vscode_cursor_ok=0
+if [[ "$vscode_cursor_ok" -eq 1 ]] && grep -q "belongs to Cursor" <<<"$vscode_cursor_output" \
+  && [[ ! -e "$tmp_home/cursor-invoked" ]]; then
+  echo "ok: Cursor's code shim is detected and skipped"
+else
+  echo "FAIL: Cursor's code shim is detected and skipped"
+  failures=$((failures + 1))
+fi
+# Run export from a module copy so it cannot write test data into the repo.
+cursor_export_module="$tmp_home/cursor-export-module"
+mkdir -p "$cursor_export_module"
+cp "$repo_dir/vscode/export.sh" "$cursor_export_module/export.sh"
+vscode_cursor_export_output="$(env HOME="$vscode_home" DOTFILES_VSCODE_BUNDLE_CLI="$tmp_home/no-such-vscode" \
+  PATH="$cursor_shim_dir:/usr/bin:/bin" bash "$cursor_export_module/export.sh" 2>&1)" \
+  && vscode_cursor_export_ok=1 || vscode_cursor_export_ok=0
+if [[ "$vscode_cursor_export_ok" -eq 1 ]] && grep -q "belongs to Cursor" <<<"$vscode_cursor_export_output" \
+  && [[ ! -e "$tmp_home/cursor-invoked" ]]; then
+  echo "ok: export does not read the extension list from Cursor"
+else
+  echo "FAIL: export does not read the extension list from Cursor"
   failures=$((failures + 1))
 fi
 
@@ -522,17 +555,17 @@ vscode_module_copy="$tmp_home/vscode-module-copy"
 mkdir -p "$vscode_module_copy"
 cp "$repo_dir/vscode/export.sh" "$vscode_module_copy/export.sh"
 check "vscode export runs (no code CLI)" \
-  env HOME="$vscode_export_home" PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
+  env HOME="$vscode_export_home" DOTFILES_CODE_BIN= PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
 check "vscode export copied settings" grep -q '"export": "test"' "$vscode_module_copy/settings.json"
 check "vscode export copied keybindings" test -f "$vscode_module_copy/keybindings.json"
 expect_fail "vscode export fails without source" \
-  env HOME="$tmp_home/vscode-missing-home" PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
+  env HOME="$tmp_home/vscode-missing-home" DOTFILES_CODE_BIN= PATH="/usr/bin:/bin" bash "$vscode_module_copy/export.sh"
 
 echo "== install --all =="
 all_home="$tmp_home/all-home"
 mkdir -p "$all_home/.claude"
 check "install --all runs" \
-  env HOME="$all_home" CLAUDE_CONFIG_DIR="$all_home/.claude" PATH="/usr/bin:/bin" \
+  env HOME="$all_home" CLAUDE_CONFIG_DIR="$all_home/.claude" DOTFILES_CODE_BIN= PATH="/usr/bin:/bin" \
   bash "$repo_dir/install.sh" --all
 check "all: statusline wrapper installed" test -x "$all_home/.claude/ccstatusline-usage-api.sh"
 check "all: ccdots installed" test -x "$all_home/.local/bin/ccdots"

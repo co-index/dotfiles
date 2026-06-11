@@ -17,6 +17,11 @@ Syncs VS Code's `settings.json`, `keybindings.json`, and the extension list
   Palette (Cmd+Shift+P) in VS Code and run "Shell Command: Install 'code'
   command in PATH". Without the CLI, settings and keybindings still copy
   fine; extension installation is skipped with a note.
+- Cursor users beware: Cursor registers its own `code` shim. The scripts
+  detect this — they prefer the CLI inside the VS Code app bundle and skip a
+  `code` that resolves into Cursor.app, so extensions never land in Cursor by
+  accident. Set `DOTFILES_CODE_BIN=/path/to/code` to force a specific CLI
+  (for example, to target Cursor on purpose).
 
 ### Installed Files
 
@@ -82,8 +87,13 @@ VS Code.
 
 - "skipped installing extensions": the `code` CLI is not on PATH; enable it
   per Prerequisites and rerun.
+- "belongs to Cursor": your `code` command points at Cursor and the VS Code
+  bundle was not found in /Applications. Reinstall the shim from inside
+  VS Code (Prerequisites above) or set `DOTFILES_CODE_BIN`.
 - A specific extension fails to install: check that the id still exists on
-  the marketplace and that the network is reachable.
+  the marketplace and that the network is reachable (publishers occasionally
+  rename — e.g. `typescript.native-preview` became
+  `typescriptteam.native-preview`).
 
 
 ## 中文
@@ -101,6 +111,10 @@ VS Code.
   （Cmd+Shift+P），运行 "Shell Command: Install 'code' command in PATH"。
   没有 `code` CLI 时，settings 和 keybindings 仍会正常复制，只是跳过插件
   安装并给出提示。
+- Cursor 用户注意：Cursor 也会注册一个 `code` 命令。脚本已做识别——优先
+  使用 VS Code 应用包内自带的 CLI，并跳过解析到 Cursor.app 的 `code`，
+  插件不会被误装进 Cursor。如需强制指定 CLI（比如就是想装进 Cursor），
+  设置 `DOTFILES_CODE_BIN=/path/to/code`。
 
 ### 安装内容
 
@@ -162,4 +176,9 @@ rm -f "$HOME/Library/Application Support/Code/User/keybindings.json"
 
 - 提示 skipped installing extensions：`code` CLI 不在 PATH，按上面"前置
   条件"启用后重跑。
-- 某个插件安装失败：检查插件 id 是否还在应用市场存在，或网络是否可达。
+- 提示 belongs to Cursor：你的 `code` 命令指向 Cursor，且 /Applications
+  里没有找到 VS Code。按"前置条件"在 VS Code 里重装 shim，或设置
+  `DOTFILES_CODE_BIN`。
+- 某个插件安装失败：检查插件 id 是否还在应用市场存在，或网络是否可达
+  （发布者偶尔会改名，例如 `typescript.native-preview` 已改为
+  `typescriptteam.native-preview`）。
